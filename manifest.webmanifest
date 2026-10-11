@@ -1,0 +1,17 @@
+{
+  "name": "L'Oie Alpine à la maison",
+  "short_name": "Oie Alpine",
+  "description": "Un jeu de l'oie d'exercices à faire chez soi, de 1 à 4 joueurs sur le même téléphone ou la même tablette.",
+  "lang": "fr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#FAF6EE",
+  "theme_color": "#2F4639",
+  "icons": [
+    { "src": "assets/icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icone-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

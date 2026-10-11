@@ -1,0 +1,820 @@
+@font-face { font-family: "Italiana"; src: url("assets/fonts/Italiana-Regular.ttf"); font-display: swap; }
+@font-face { font-family: "Jura"; src: url("assets/fonts/Jura-Medium.ttf"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Jura"; src: url("assets/fonts/Jura-SemiBold.ttf"); font-weight: 600; font-display: swap; }
+
+:root {
+  --ivoire: #FAF6EE; --papier: #FFFDF8; --cacao: #3A2E22; --sapin: #2F4639; --cuivre: #B07D4F;
+  --filet: rgba(58, 46, 34, 0.16); --cacao-doux: rgba(58, 46, 34, 0.62); --sapin-voile: #E9ECE4; --blanc: #FFFFFF;
+  --j0: #D9483B; --j1: #2E6FB0; --j2: #E0A526; --j3: #3F9A5B;
+  --tactile: 56px; --rayon: 14px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  background: var(--ivoire); color: var(--cacao);
+  font-family: "Jura", system-ui, sans-serif; font-weight: 500; font-size: 17px; line-height: 1.35;
+  touch-action: manipulation; -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent;
+}
+
+#tourner { display: none; }
+body.mode-tourner #tourner {
+  display: flex; position: fixed; top: 0; right: 0; bottom: 0; left: 0; inset: 0; z-index: 50; align-items: center; justify-content: center;
+  background: var(--sapin); color: var(--ivoire); font-family: "Italiana", serif; font-size: 32px;
+  text-align: center; padding: 24px;
+}
+
+/* ---------------------------------------------------------------- base */
+/* Les valeurs visuelles viennent de la maquette validée le 10/10/2026
+   (maquettes/ecrans.html) ; les noms de classes, du plan. */
+:root { --sapin-ombre: #1D2C24; --cuivre-fonce: #7A5230; --eteint: #D8D0C3; }
+h1, h2, h3, p, ul, ol { margin: 0; padding: 0; }
+ul, ol { list-style: none; }
+button { font: inherit; color: inherit; background: none; border: 0; margin: 0; padding: 0; cursor: pointer; }
+a { color: var(--sapin); }
+/* Anneau de focus au clavier : cuivre, à 2 px du bord pour rester visible sur les boutons sapin.
+   Seule la règle est ajoutée, l'anneau par défaut du navigateur reste partout ailleurs. */
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible {
+  outline: 3px solid var(--cuivre); outline-offset: 2px; }
+#racine { min-height: 100vh; min-height: 100dvh; }
+.ecran { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column;
+  padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+.picto { flex: none; display: block; }
+.surtitre { font-size: 14px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--cuivre-fonce); }
+.titre-ecran { font-family: "Italiana", serif; font-weight: 400; font-size: 30px; letter-spacing: .03em; line-height: 1.05; }
+.aide { font-size: 16px; line-height: 1.35; }
+
+/* Boutons : 56 px de haut au moins, pour des doigts en sueur. */
+.bouton { min-height: var(--tactile); padding: 0 20px; border-radius: var(--rayon); border: 2px solid var(--cacao);
+  background: var(--papier); color: var(--cacao); display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  font-weight: 600; font-size: 19px; line-height: 1.1; text-align: center; }
+.bouton:active { transform: scale(.97); }
+.bouton-principal { background: var(--sapin); border-color: var(--sapin); color: var(--ivoire); box-shadow: 0 3px 0 var(--sapin-ombre); }
+.bouton-discret { border-color: var(--filet); background: transparent; }
+.bouton-large { width: 100%; min-height: 64px; font-size: 22px; }
+.bouton-carre { width: var(--tactile); height: var(--tactile); padding: 0; font-size: 30px; }
+
+/* Bandeau collé en haut, pied collé en bas : les actions restent à portée
+   de pouce quand la page défile. Le filet de cuivre sous le bandeau est
+   peint dans une bande ivoire (box-shadow) pour que le contenu qui défile
+   dessous ne le traverse pas. */
+.bandeau { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  min-height: 68px; padding: calc(4px + env(safe-area-inset-top)) 16px 8px; background: var(--ivoire); border-bottom: 1px solid var(--filet);
+  box-shadow: 0 5px 0 var(--ivoire); }
+.bandeau::after { content: ""; position: absolute; left: 16px; right: 16px; bottom: -4px; height: 1px; background: var(--cuivre); opacity: .45; }
+.bandeau-gauche, .bandeau-droite { display: flex; align-items: center; min-width: 0; }
+.bandeau-gauche { gap: 12px; }
+.bandeau-droite { flex: none; gap: 8px; }
+.bandeau-titre { display: flex; flex-direction: column; min-width: 0; }
+.bandeau-sous { font-size: 16px; line-height: 1.25; margin-top: 3px; }
+.pied { position: sticky; bottom: 0; z-index: 5; flex: none; display: flex; flex-direction: column; gap: 10px; margin-top: auto;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: var(--ivoire); border-top: 1px solid var(--filet); }
+
+/* Fenêtres : sur téléphone, la fenêtre monte du bas de l'écran. */
+.modal-fond { position: fixed; top: 0; right: 0; bottom: 0; left: 0; inset: 0; z-index: 20; background: rgba(58, 46, 34, .45); display: flex; align-items: flex-end;
+  justify-content: center; }
+.modal { width: 100%; max-width: 560px; max-height: 90vh; max-height: 90dvh; overflow: auto; border-radius: 24px 24px 0 0;
+  background: var(--ivoire); box-shadow: 0 -10px 40px rgba(0, 0, 0, .3); padding-bottom: env(safe-area-inset-bottom); }
+.modal > h2 { font-family: "Italiana", serif; font-weight: 400; font-size: 30px; line-height: 1.1; padding: 24px 22px 0; }
+.modal > p { font-size: 17px; line-height: 1.4; color: var(--cacao); padding: 10px 22px 0; }
+.modal-choix { display: flex; flex-direction: column; gap: 10px; padding: 20px 22px 22px; }
+
+/* Zone d'annonce des lecteurs d'écran (aria-live) : dans la page, jamais à l'écran. */
+.annonces { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0);
+  clip-path: inset(50%); white-space: nowrap; }
+
+/* Commandes partagées */
+.pastille-joueur { display: inline-block; flex: none; width: var(--taille, 28px); height: var(--taille, 28px); border-radius: 50%;
+  background: var(--joueur); box-shadow: 0 0 0 3px var(--papier), 0 0 0 4.5px var(--joueur); }
+/* Prénom en pastille pleine à la couleur du joueur ; --joueur-texte donne un texte lisible aussi sur le jaune. */
+.nom-joueur { display: inline-block; font-family: "Jura", sans-serif; font-weight: 600; font-size: 23px; letter-spacing: 0; line-height: 1.25;
+  padding: 0 9px; border-radius: 9px; background: var(--joueur); color: var(--joueur-texte, #FFFFFF); vertical-align: 2px; }
+.segments { display: flex; flex-wrap: wrap; gap: 8px; }
+.segment { flex: 1 1 0; min-width: 0; min-height: var(--tactile); padding: 6px 8px; border-radius: var(--rayon); border: 2px solid var(--filet);
+  background: var(--papier); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  font-weight: 600; font-size: 17px; line-height: 1.15; text-align: center; }
+.segment small { font-weight: 500; font-size: 14px; }
+.segment.choisi { background: var(--sapin); border-color: var(--sapin); color: var(--ivoire); box-shadow: 0 3px 0 var(--sapin-ombre); }
+.niveau { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.niveau-val { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 0 8px; min-width: 0;
+  font-weight: 600; font-size: 40px; line-height: 1; }
+.niveau-val small { font-size: 16px; font-weight: 500; }
+.interrupteur { flex: none; width: 54px; height: 32px; border-radius: 16px; background: var(--eteint); position: relative; }
+.interrupteur::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--blanc); box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.actif .interrupteur { background: var(--sapin); }
+.actif .interrupteur::after { left: 25px; }
+
+/* Mode large (tablette en paysage) : bandeau, titre et boutons du bandeau à la taille de la maquette ;
+   la fenêtre redevient une boîte centrée. */
+body.mode-large .bandeau { min-height: calc(84px + env(safe-area-inset-top)); padding: calc(6px + env(safe-area-inset-top)) 24px 6px; }
+body.mode-large .bandeau::after { left: 24px; right: 24px; }
+body.mode-large .bandeau-droite { gap: 12px; flex: 0 1 auto; }
+body.mode-large .bandeau-sous { font-size: 19px; margin: 0 8px 0 0; flex: 0 1 auto; min-width: 0; line-height: 1.2; }
+body.mode-large .bandeau .bouton { min-height: 60px; font-size: 21px; }
+body.mode-large .bandeau .bouton-carre { width: 60px; height: 60px; }
+body.mode-large .titre-ecran { font-size: 44px; letter-spacing: .04em; }
+body.mode-large .nom-joueur { font-size: 34px; line-height: 1.3; padding: 0 14px; border-radius: 12px; vertical-align: 4px; }
+body.mode-large .modal-fond { align-items: center; padding: 16px; }
+body.mode-large .modal { border-radius: 22px; box-shadow: 0 30px 80px rgba(0,0,0,.45); padding-bottom: 0; }
+
+/* ---------------------------------------------------------------- sentier (mode étroit) */
+/* Valeurs de la maquette validée le 10/10/2026 (vues 6 à 8) ; noms de classes du plan.
+   --pas : décalage d'un cran de lacet. La case est plus étroite de deux crans, si bien
+   que la case du cran 2 finit au bord droit de la liste. */
+.sentier { --pas: 26px; position: relative; flex: 1; min-height: 0; display: flex; gap: 14px; padding: 0 22px 0 8px; }
+.sentier-cases { position: relative; flex: 1; min-width: 0; overflow-y: auto; overscroll-behavior: contain; display: flex;
+  flex-direction: column; gap: 10px; padding: 22px 14px 18px 6px; }
+.sentier-case { position: relative; flex: none; display: flex; align-items: center; gap: 8px; min-height: 50px;
+  width: calc(100% - 2 * var(--pas)); margin-left: calc(var(--cran) * var(--pas)); padding: 4px 12px 4px 10px;
+  border-radius: 12px; border: 1px solid var(--filet); }
+/* Le lien entre deux cases : un chevron cuivre qui pointe vers le sommet. */
+.sentier-case:not(:last-child)::after { content: ""; position: absolute; left: 50%; bottom: -10px; width: 7px; height: 7px;
+  margin-left: -4px; border-left: 2px solid var(--cuivre); border-top: 2px solid var(--cuivre); transform: rotate(45deg); }
+.sentier-num { flex: none; width: 20px; font-size: 13px; font-weight: 600; }
+.sentier-picto { flex: none; width: 24px; height: 24px; color: var(--sapin); }
+.sentier-nom { flex: 1; min-width: 0; display: flex; flex-direction: column; font-weight: 600; font-size: 17px; line-height: 1.12;
+  overflow-wrap: break-word; hyphens: auto; }
+.sentier-cible { font-size: 13px; font-weight: 600; letter-spacing: .02em; text-transform: none; }
+.sentier-alt { flex: none; font-size: 14px; font-weight: 600; color: var(--cuivre-fonce); white-space: nowrap; }
+.sentier-speciale { border: 1.5px solid var(--sapin); color: var(--sapin); }
+.sentier-speciale .sentier-nom { font-size: 14px; letter-spacing: .08em; text-transform: uppercase; }
+.sentier-case.case-sommet { border-color: var(--cuivre); color: var(--ivoire); }
+.sentier-case.case-sommet .sentier-picto, .sentier-case.case-sommet .sentier-alt { color: var(--ivoire); }
+.sentier-arrivee { border: 3px solid var(--cuivre); box-shadow: 0 0 0 4px rgba(176, 125, 79, .28); }
+.sentier-case.case-sommet.sentier-arrivee { border-color: var(--ivoire); }
+/* Les pions d'une case se posent sur son coin haut droit, à cheval sur le bord. */
+.sentier-pions { position: absolute; top: -16px; right: -12px; display: flex; gap: 3px; }
+.sentier-pion { width: 30px; height: 30px; border-radius: 50%; background: var(--joueur); color: var(--joueur-texte);
+  display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 16px; line-height: 1;
+  box-shadow: 0 0 0 2px var(--ivoire), 0 2px 5px rgba(58, 46, 34, .35); }
+.sentier-pion-actif { box-shadow: 0 0 0 2px var(--ivoire), 0 0 0 4.5px var(--joueur); }
+/* La jauge montre toute l'ascension : le dégradé, un repère par joueur, la portion visible du sentier
+   (la fenêtre : top et height posés par l'écran de partie). */
+.jauge { position: relative; flex: none; width: 14px; margin: 48px 0; border-radius: 7px;
+  background: linear-gradient(var(--cuivre), var(--sapin-voile)); box-shadow: inset 0 0 0 1px var(--filet); }
+.jauge-sommet, .jauge-depart { position: absolute; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: 600;
+  color: var(--cuivre-fonce); white-space: nowrap; }
+/* Les repères débordent de la jauge d'au plus 11 px en haut et 23 px en bas (quatre joueurs au départ) :
+   les libellés se placent au-delà. */
+.jauge-sommet { top: -44px; }
+.jauge-depart { bottom: -44px; }
+.jauge-fenetre { position: absolute; top: 0; height: 15%; left: -6px; right: -6px; border: 2px solid var(--cacao); border-radius: 7px; }
+.jauge-pion { position: absolute; left: -4px; width: 22px; height: 22px; margin-top: -11px; border-radius: 50%;
+  background: var(--joueur); border: 2px solid var(--ivoire); box-shadow: 0 0 0 1px var(--filet); }
+/* Petit téléphone (320 px) : lacets plus serrés, altitude plus petite, pour garder la place des noms. */
+@media (max-width: 359px) {
+  .sentier { --pas: 12px; gap: 10px; }
+  .sentier-case { gap: 6px; padding-right: 8px; }
+  .sentier-alt { font-size: 12px; }
+}
+
+/* ---------------------------------------------------------------- plateau entier (mode large) */
+/* Repris de L'Oie Alpine, aux valeurs de la maquette (vue 15) : le cadre garde les proportions de la grille
+   (--colonnes, --lignes) et tient dans la zone, quelle que soit la longueur du plateau. */
+.plateau { position: relative; flex: 1; min-height: 0; margin: 14px 20px; container-type: size; }
+/* Les deux premières lignes de taille sont le repli des navigateurs sans unités de conteneur (avant iOS 16) : la zone vaut
+   la fenêtre moins le bandeau (84 px) et les marges (14 px et 20 px). */
+.plateau-cadre { position: absolute; top: 0; right: 0; bottom: 0; left: 0; inset: 0; margin: auto;
+  width: min(calc(100vw - 40px), calc((100vh - 112px) * var(--colonnes) / var(--lignes)));
+  height: min(calc(100vh - 112px), calc((100vw - 40px) * var(--lignes) / var(--colonnes)));
+  width: min(100cqw, calc(100cqh * var(--colonnes) / var(--lignes))); height: min(100cqh, calc(100cqw * var(--lignes) / var(--colonnes))); }
+.plateau-svg { display: block; width: 100%; height: 100%; overflow: visible; font-family: "Jura", sans-serif; }
+.case rect { fill: var(--papier); stroke: var(--filet); stroke-width: 1; }
+.case-num { font-size: 17px; font-weight: 600; fill: var(--cacao-doux); }
+.case-chaine { font-size: 22px; font-weight: 600; fill: var(--cacao); }
+.case-chaine-serre { font-size: 18.5px; }
+.case-chaine-tres-serre { font-size: 15px; }
+.case-alt { font-size: 22px; font-weight: 600; fill: var(--cuivre-fonce); }
+.case-speciale rect { stroke: var(--sapin); stroke-width: 1.5; }
+.case-picto { color: var(--sapin); }
+.case-lib { font-size: 16px; font-weight: 600; letter-spacing: 0.1em; fill: var(--sapin); }
+.case-lib-long { font-size: 13.5px; letter-spacing: 0.02em; }
+.case-cible { font-size: 17px; font-weight: 600; fill: var(--sapin); }
+.case-sommet rect { fill: var(--cuivre); stroke: var(--cuivre); }
+.case-sommet .case-picto { color: var(--ivoire); }
+.case-sommet .case-lib, .case-sommet .case-alt, .case-sommet .case-num { fill: var(--ivoire); }
+.chevron { fill: none; stroke: var(--cuivre); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.case-arrivee rect { stroke: var(--cuivre); stroke-width: 5; animation: case-arrivee 700ms ease-out 2; }
+.case-arrivee .case-num, .case-arrivee .case-alt { fill: var(--cuivre-fonce); }
+@keyframes case-arrivee { 0% { stroke-width: 5; } 45% { stroke-width: 10; } 100% { stroke-width: 5; } }
+.case-sommet.case-arrivee .case-num, .case-sommet.case-arrivee .case-alt { fill: var(--ivoire); }
+/* Plateau de 82 cases (classe posée par le rendu au-delà de 72 cases) : les cases sont plus petites à l'écran,
+   le numéro, la destination d'une avalanche et le libellé du type passent de 16-17 à 22-26 unités (24 pour « vers N »,
+   qui partage la ligne du numéro).
+   Les noms d'exercices gardent leurs corps : leur découpe est calculée pour la case de 160 unités. */
+.plateau-dense .case-num { font-size: 26px; }
+.plateau-dense .case-cible { font-size: 24px; }
+.plateau-dense .case-lib { font-size: 22px; letter-spacing: 0.04em; }
+.pion-lettre { font-size: 26px; font-weight: 600; }
+.pion-lettre-serree { font-size: 21px; }
+@media (prefers-reduced-motion: reduce) { .case-arrivee rect { animation: none; } }
+
+/* ================================================================ écrans d'avant-partie */
+/* Noms de classes du plan, valeurs visuelles de la maquette validée le 10/10/2026 (vues 1 à 4 et 13).
+   Les écrans défilent dans la page : le bandeau et le pied sont collés (voir « base »), le milieu s'étire. */
+.etiquette, .groupe-titre, .champ-lib { font-size: 14px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--cuivre-fonce); }
+.bouton-retour { padding: 0 14px 0 10px; gap: 6px; font-size: 17px; }
+.bouton-bloc { display: flex; width: 100%; }
+/* Choix exclusifs en grille : phases 2 × 2, durées sur 3 colonnes, espaces sur 2. */
+.segments-phases, .segments-2 { display: grid; grid-template-columns: 1fr 1fr; }
+.segments-3 { display: grid; grid-template-columns: repeat(3, 1fr); }
+.segments .segment { overflow-wrap: break-word; }
+/* Petit téléphone (320 px) : « Réathlétisation » doit tenir dans une demi-largeur de carte de joueur ;
+   le bandeau (Retour, titre) et les deux boutons de l'accueil se resserrent. */
+@media (max-width: 359px) {
+  .segments-phases .segment { font-size: 15px; padding: 6px 2px; }
+  .bandeau-gauche { gap: 8px; }
+  .bouton-retour { padding: 0 10px 0 6px; }
+  .titre-ecran { font-size: 26px; }
+  /* Pas de retour à la ligne dans le titre des écrans d'avant-partie ; ceux de la partie (« Chute de neige »,
+     « À Léa de lancer ») doivent pouvoir passer à la ligne plutôt que pousser les boutons hors de l'écran. */
+  .ecran-accueil .titre-ecran, .ecran-choix .titre-ecran, .ecran-joueurs .titre-ecran, .ecran-regles .titre-ecran,
+  .ecran-historique .titre-ecran { white-space: nowrap; }
+  .accueil-actions .bouton:not(.bouton-large) { font-size: 17px; padding: 0 4px; }
+}
+
+/* Tablette : le bouton du pied garde la largeur de la colonne de contenu. */
+body.mode-large .pied { align-items: center; }
+body.mode-large .pied .bouton-bloc { max-width: 760px; }
+
+/* ---------------------------------------------------------------- accueil */
+.ecran-accueil { width: 100%; max-width: 640px; margin: 0 auto; gap: 14px;
+  padding: calc(4px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left)); }
+.titre-jeu { font-family: "Italiana", serif; font-weight: 400; font-size: 48px; line-height: .98; letter-spacing: .02em; }
+.crete { display: block; width: 100%; max-width: 420px; height: auto; margin: 8px 0 6px; overflow: visible; fill: none; stroke: var(--cuivre);
+  stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.crete .crete-maison { stroke: var(--sapin); }
+.accroche { font-size: 16px; line-height: 1.35; }
+.reprise { border: 2px solid var(--cuivre); border-radius: 18px; background: var(--papier); padding: 12px 14px 15px; display: flex; flex-direction: column; gap: 10px; }
+.reprise-texte { display: flex; flex-direction: column; gap: 2px; font-weight: 600; font-size: 18px; line-height: 1.3; }
+.reprise-boutons { display: flex; flex-wrap: wrap; gap: 10px; }
+.reprise-boutons .bouton { flex: 1 1 130px; padding: 0 8px; }   /* côte à côte quand la largeur le permet, sinon l'un sous l'autre */
+/* Message court après une erreur : en tête de l'accueil, sans rien de technique. */
+.avis { font-size: 16px; font-weight: 600; line-height: 1.3; color: var(--cacao); background: #F3E6D5; border: 2px solid var(--cuivre); border-radius: 12px; padding: 10px 14px; }
+.accueil-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 10px; }
+.accueil-actions .bouton { padding: 0 8px; }
+.accueil-actions .bouton-large { grid-column: 1 / -1; }
+.accueil-pied { margin-top: auto; display: flex; flex-direction: column; gap: 4px; }
+.avertissement { font-size: 16px; font-weight: 600; line-height: 1.3; color: var(--sapin); background: var(--sapin-voile); border-radius: 12px; padding: 10px 14px; }
+/* Les deux premiers liens côte à côte quand la largeur le permet, sinon l'un sous l'autre ; le dernier, plus long, a sa ligne. */
+.liens-cabinet { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 8px; }
+.liens-cabinet .lien-long { flex-basis: 100%; }
+.liens-cabinet a { display: inline-flex; align-items: center; min-height: var(--tactile); white-space: nowrap; font-size: 16px; font-weight: 600; color: var(--sapin);
+  text-decoration: underline; text-decoration-color: var(--cuivre); text-underline-offset: 5px; }
+.signature { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--cuivre-fonce); }
+.signature img { display: block; width: 38px; height: auto; }
+/* Tablette : la colonne reste étroite et se pose au milieu, avec plus d'air. */
+body.mode-large .ecran-accueil { gap: 22px; padding-top: calc(40px + env(safe-area-inset-top)); padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+body.mode-large .titre-jeu { font-size: 64px; }
+body.mode-large .accroche { font-size: 19px; }
+
+/* ---------------------------------------------------------------- ta partie */
+.choix-blocs, .joueurs, .historique, .intro { width: 100%; max-width: 760px; margin: 0 auto; }
+.choix-blocs { display: flex; flex-direction: column; gap: 24px; padding: 16px 16px 20px; }
+.bloc { display: flex; flex-direction: column; gap: 8px; }
+.bloc-titre { font-family: "Italiana", serif; font-weight: 400; font-size: 26px; line-height: 1.1; letter-spacing: .02em; }
+.bloc-detail { font-size: 16px; font-weight: 600; color: var(--sapin); }
+.groupe-themes { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.tuiles-themes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tuile-theme { min-height: var(--tactile); border-radius: var(--rayon); border: 2px solid var(--filet); background: var(--papier); padding: 6px 12px;
+  display: flex; align-items: center; text-align: left; font-weight: 600; font-size: 17px; line-height: 1.15; color: var(--sapin); }
+.tuile-theme.choisie { background: var(--sapin); border-color: var(--sapin); color: var(--ivoire); box-shadow: 0 3px 0 var(--sapin-ombre); }
+.tuile-seule { grid-column: 1 / -1; }
+body.mode-large .tuiles-themes { grid-template-columns: repeat(4, 1fr); }
+body.mode-large .tuile-seule { grid-column: span 2; }
+
+/* ---------------------------------------------------------------- grimpeurs */
+.intro { padding: 14px 16px 0; font-size: 16px; line-height: 1.35; }
+.joueurs { display: flex; flex-direction: column; gap: 14px; padding: 12px 16px 20px; }
+body.mode-large .joueurs { max-width: 1100px; display: grid; grid-template-columns: repeat(2, 1fr); align-items: start; }
+body.mode-large .intro { max-width: 1100px; }
+.joueur { background: var(--papier); border: 2px solid var(--filet); border-top: 8px solid var(--joueur); border-radius: 18px;
+  padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+.joueur-tete { display: flex; align-items: center; gap: 14px; padding-left: 4px; }
+/* 20 px : au-dessous de 16 px, iOS zoomerait sur la page à la prise de focus du champ. */
+.saisie { flex: 1; min-width: 0; height: var(--tactile); border-radius: 12px; border: 2px solid var(--cacao); background: var(--blanc);
+  padding: 0 14px; font: inherit; font-size: 20px; font-weight: 600; color: var(--cacao); text-overflow: ellipsis; }
+.saisie::placeholder { font-size: 16px; font-weight: 500; color: var(--cacao-doux); }
+.lien-retirer { min-width: var(--tactile); min-height: var(--tactile); display: flex; align-items: center; justify-content: center; padding: 0 4px;
+  font-size: 16px; text-decoration: underline; text-underline-offset: 4px; }
+.filtres { display: flex; flex-direction: column; gap: 4px; }
+.filtre { width: 100%; min-height: var(--tactile); display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 10px 0 14px;
+  border-radius: 12px; font-size: 16px; line-height: 1.2; text-align: left; }
+.filtre.actif { background: var(--sapin-voile); color: var(--sapin); font-weight: 600; }
+.bouton-ajout { flex-direction: column; gap: 6px; width: 100%; min-height: 112px; border: 2px dashed var(--cacao-doux); background: transparent; }
+.bouton-ajout .plus { font-size: 42px; line-height: .8; font-weight: 500; color: var(--cuivre); }
+
+/* ---------------------------------------------------------------- mes parties */
+.historique { display: flex; flex-direction: column; gap: 8px; padding: 16px 16px 20px; }
+.historique-compteur { font-family: "Italiana", serif; font-weight: 400; font-size: 30px; line-height: 1.1; letter-spacing: .02em; }
+.historique-compteur b { font-family: "Jura", sans-serif; font-weight: 600; font-size: 28px; letter-spacing: 0; }
+.historique-liste { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.partie-passee { background: var(--papier); border: 1px solid var(--filet); border-radius: 14px; padding: 10px 14px 12px; display: flex; flex-direction: column; gap: 3px; }
+.partie-date { font-size: 14px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--cuivre-fonce); }
+.partie-titre { font-weight: 600; font-size: 17px; line-height: 1.3; }
+.partie-joueurs { font-size: 16px; line-height: 1.3; }
+.historique-vide { font-size: 17px; line-height: 1.35; padding: 8px 0; }
+
+/* ---------------------------------------------------------------- règles */
+.regles, .illu { width: 100%; max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; }
+.illu { gap: 14px; padding: 14px 16px 18px; }
+.regles { gap: 18px; padding: 16px; }
+body.mode-large .regles { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+body.mode-large .regles .securite { grid-column: 1 / -1; }
+.securite { font-size: 16px; line-height: 1.36; background: var(--sapin-voile); border-left: 4px solid var(--sapin); border-radius: 4px 14px 14px 4px; padding: 10px 14px; }
+.securite b { font-weight: 600; color: var(--sapin); }
+.regles-titre { font-family: "Italiana", serif; font-weight: 400; font-size: 26px; line-height: 1.1; letter-spacing: .02em; margin-bottom: 8px; }
+.illu .regles-titre { margin-bottom: 0; }
+.regles-bloc { margin-bottom: 14px; }
+.regles-points li { position: relative; padding-left: 16px; margin: 4px 0; line-height: 1.4; }
+.regles-points li::before { content: ""; position: absolute; left: 0; top: .6em; width: 6px; height: 6px; border-radius: 50%; background: var(--cuivre); }
+.cases-liste { display: flex; flex-direction: column; gap: 12px; }
+.cases-colonne { display: flex; flex-direction: column; gap: 12px; }
+body.mode-large .regles .cases-liste { gap: 24px; }
+body.mode-large .regles .cases-colonne { flex: 1; }
+.case-ligne { display: flex; align-items: flex-start; gap: 12px; }
+.case-ligne .case-picto { flex: none; width: 44px; height: 44px; border-radius: 12px; background: var(--sapin-voile); color: var(--sapin);
+  display: flex; align-items: center; justify-content: center; }
+.case-ligne.case-sommet .case-picto { background: var(--cuivre); color: var(--ivoire); }
+.case-ligne.case-piolet .case-picto { background: #F6EBDD; color: var(--cuivre-fonce); }
+.case-corps { display: flex; flex-direction: column; line-height: 1.3; }
+.case-nom { font-weight: 600; font-size: 17px; color: var(--sapin); }
+.case-effet, .case-solo { font-size: 16px; }
+.illu-etapes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+body.mode-large .illu-etapes { grid-template-columns: repeat(4, 1fr); }
+.illu-etape { position: relative; background: var(--papier); border: 1px solid var(--filet); border-radius: 16px; padding: 8px 8px 12px;
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 3px; }
+.illu-num { position: absolute; top: 8px; left: 8px; width: 30px; height: 30px; border-radius: 50%; background: var(--cuivre); color: var(--ivoire);
+  font-weight: 600; font-size: 17px; display: flex; align-items: center; justify-content: center; }
+.illu-dessin { width: 100%; }
+.illu-dessin svg { display: block; width: 100%; height: 100px; overflow: visible; }
+.illu-titre { font-weight: 600; font-size: 18px; color: var(--sapin); }
+.illu-phrase { font-size: 16px; line-height: 1.25; }
+.trop-dur { font-size: 16px; line-height: 1.36; background: #F6EBDD; border-left: 4px solid var(--cuivre); border-radius: 4px 14px 14px 4px; padding: 10px 14px; }
+.trop-dur b { font-weight: 600; color: var(--cuivre-fonce); }
+.pied-note { font-size: 16px; line-height: 1.3; }
+/* Le trait des dessins, repris de L'Oie Alpine. */
+.ill-mouv { fill: none; stroke: var(--cuivre); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.ill-pointille { stroke-dasharray: 2 7; }
+.ill-de { fill: var(--papier); stroke: var(--cacao); stroke-width: 3.5; }
+.ill-point { fill: var(--cacao); }
+.ill-case { stroke: var(--filet); stroke-width: 1.5; }
+.ill-num { font-family: "Jura", sans-serif; font-weight: 600; font-size: 14px; fill: var(--cacao-doux); }
+.ill-fantome { fill: none; stroke: var(--cacao-doux); stroke-width: 2; stroke-dasharray: 4 4; }
+.ill-pion { stroke: var(--ivoire); stroke-width: 3.5; }
+.ill-lettre { font-family: "Jura", sans-serif; font-weight: 600; font-size: 19px; fill: #fff; text-anchor: middle; }
+.ill-carte { fill: var(--papier); stroke: var(--cacao); stroke-width: 2.5; }
+.ill-ligne { fill: var(--cacao); }
+.ill-ligne-douce { fill: var(--filet); }
+.ill-dosage { font-family: "Jura", sans-serif; font-weight: 600; font-size: 34px; fill: var(--cacao); }
+.ill-coches polyline { fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.ill-bouton { fill: var(--sapin); }
+.ill-bouton-ombre { fill: #1D2C24; }
+.ill-bouton-texte { font-family: "Jura", sans-serif; font-weight: 600; font-size: 26px; fill: var(--ivoire); text-anchor: middle; }
+
+/* ================================================================ écran de partie */
+/* Noms de classes du plan, valeurs visuelles de la maquette validée le 10/10/2026 (vues 5 à 12, 15 et 16). */
+.bouton-icone { width: var(--tactile); padding: 0; }
+.titre-tour { font-family: "Italiana", serif; font-weight: 400; font-size: 28px; line-height: 1.15; letter-spacing: .01em; }
+.titre-tour .nom-joueur { font-size: 23px; }
+.titre-tour .chiffre-de, .lancer-res .chiffre-de { font-family: "Jura", sans-serif; font-weight: 600; font-size: 28px; letter-spacing: 0; vertical-align: 0; }
+.bandeau-titre-ligne { flex-direction: row; align-items: baseline; gap: 22px; }
+.bandeau-titre-ligne .bandeau-sous { margin: 0; }
+body.mode-large .titre-tour { font-size: 46px; line-height: 1; letter-spacing: .03em; }
+body.mode-large .titre-tour .nom-joueur { font-size: 34px; }
+body.mode-large .titre-tour .chiffre-de { font-size: 40px; }
+body.mode-large .titre-tour.titre-long { font-size: 38px; }
+body.mode-large .titre-tour.titre-long .nom-joueur { font-size: 28px; }
+body.mode-large .titre-tour.titre-long .chiffre-de { font-size: 34px; }
+
+/* ---------------------------------------------------------------- le lancer : sentier (téléphone) et plateau entier (tablette) */
+/* Hauteur de l'écran : la barre du bas reste visible sans faire défiler la page, c'est le sentier qui défile. */
+.ecran-jeu { height: 100vh; height: 100dvh; min-height: 0; }
+.plateau-sentier { flex: 1; min-height: 0; display: flex; }
+/* Hauteur constante, avec ou sans bouton : le sentier ne saute pas pendant le choix du col. */
+.lancer-barre { flex: none; min-height: 153px; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px;
+  padding: 10px 16px calc(12px + env(safe-area-inset-bottom)); background: var(--ivoire); border-top: 1px solid var(--filet); }
+.lancer-ligne { display: flex; align-items: center; gap: 14px; min-height: 56px; }
+.lancer-texte { flex: 1; min-width: 0; }
+.lancer-de { flex: none; display: block; transform: rotate(-6deg); filter: drop-shadow(0 3px 4px rgba(58, 46, 34, .25)); }
+.lancer-de-attente { opacity: .5; }
+.lancer-sur { font-size: 13px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--cuivre-fonce); }
+.lancer-res { font-family: "Italiana", serif; font-size: 22px; line-height: 1.25; }
+.lancer-res .nom-joueur { font-size: 19px; }
+.lancer-effet { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 16px; font-weight: 600; line-height: 1.25; color: var(--sapin); }
+.lancer-effet-cache { visibility: hidden; }
+.bouton-lancer { width: 100%; min-height: 64px; font-size: 22px; gap: 12px; }
+.bouton-lancer .de { width: 1.35em; height: 1.35em; }
+.bouton-lancer .de rect { fill: var(--ivoire); stroke: none; }
+.bouton-lancer .de circle { fill: var(--sapin); }
+@keyframes de-roule {
+  0%   { transform: rotate(-6deg) scale(1); }
+  14%  { transform: rotate(-64deg) scale(.86); }
+  30%  { transform: rotate(46deg) scale(1.07); }
+  46%  { transform: rotate(-32deg) scale(.93); }
+  62%  { transform: rotate(20deg) scale(1.05); }
+  80%  { transform: rotate(-11deg) scale(.98); }
+  100% { transform: rotate(-6deg) scale(1); }
+}
+.lancer-de-anime { animation: de-roule 640ms cubic-bezier(.24, .72, .34, 1) both; }
+@media (prefers-reduced-motion: reduce) { .lancer-de-anime { animation: none; } }
+
+/* Plateau entier : le lancer au cœur de la spirale, les positions dans la ligne libre du dessous. Les tailles suivent
+   la hauteur du cœur (cqh) : il rétrécit avec la grille, de 40 à 82 cases. */
+/* (Les unités cq d'un conteneur ne valent que pour ses descendants : l'espacement du cœur lui-même est en px.) */
+.coeur { position: absolute; container-type: size; display: flex; align-items: center; gap: 36px; padding: 0 48px; border-radius: 18px;
+  background: var(--ivoire); border: 1px solid var(--cuivre); box-shadow: inset 0 0 0 5px var(--ivoire), inset 0 0 0 6px rgba(176, 125, 79, .35); }
+/* Chaque taille en cq est précédée d'une valeur en px pour les navigateurs sans unités de conteneur (avant iOS 16). */
+.coeur .lancer-de { width: 64px; height: 64px; width: 45cqh; height: 45cqh; filter: drop-shadow(0 4px 6px rgba(58, 46, 34, .25)); }
+.coeur .lancer-sur { letter-spacing: .2em; font-size: 15px; font-size: clamp(13px, 5cqh, 17px); }
+.coeur .lancer-res { line-height: 1.1; margin-top: 2px; font-size: 36px; font-size: clamp(28px, 15cqh, 50px); }
+.coeur .lancer-res .nom-joueur { padding: 0 14px; border-radius: 12px; vertical-align: 4px; font-size: 26px; font-size: clamp(22px, 10.5cqh, 34px); }
+.coeur .lancer-res .chiffre-de { font-size: 34px; font-size: clamp(28px, 13cqh, 44px); }
+.coeur .lancer-effet { margin-top: 10px; font-size: 18px; font-size: clamp(16px, 6.6cqh, 22px); }
+/* Au moins 56 px de haut, même quand le cœur rétrécit (plateau de 82 cases sur une tablette de 1024 px). */
+.coeur .bouton-lancer { width: auto; flex: none; min-height: 56px; min-height: max(56px, 36cqh); padding: 0 28px; padding: 0 clamp(18px, 11cqh, 36px);
+  font-size: 28px; font-size: clamp(22px, 10.9cqh, 36px); gap: .5em; border-radius: 18px; }
+.coeur .bouton-lancer .de { width: 1.3em; height: 1.3em; }
+.liste-positions { position: absolute; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 28px; gap: 4px clamp(14px, 4.8cqw, 64px);
+  padding: 0 12px; border-radius: 14px; border: 1px dashed var(--cacao-doux); overflow: hidden; }
+.liste-positions p { display: flex; align-items: center; gap: 12px; font-size: 18px; font-size: clamp(15px, 1.8cqw, 24px); white-space: nowrap; }
+.liste-positions b { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* Trois ou quatre joueurs : deux colonnes, un peu plus petit ; un prénom très long rétrécit avec des points de suspension. */
+.liste-positions-grille { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: center; justify-items: start; gap: 6px 14px; }
+.liste-positions-grille p { gap: 8px; min-width: 0; max-width: 100%; font-size: 15px; font-size: clamp(13px, 1.55cqw, 21px); }
+.liste-positions-grille .pastille-joueur { width: 16px; height: 16px; box-shadow: 0 0 0 2px var(--papier), 0 0 0 3.5px var(--joueur); }
+.liste-positions span:last-child { font-weight: 600; color: var(--cuivre-fonce); }
+
+/* ---------------------------------------------------------------- fenêtre du col (maquette, vue 8) */
+.modal-entete { display: flex; align-items: center; gap: 14px; padding: 14px 18px 16px; background: var(--sapin); color: var(--ivoire); }
+.modal-entete > div { flex: 1; min-width: 0; }
+.modal-sur { font-size: 14px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #E3B98F; }
+.modal-titre { font-family: "Italiana", serif; font-weight: 400; font-size: 40px; line-height: 1; letter-spacing: .03em; margin-top: 2px; }
+.modal-entete .pastille-joueur { margin-right: 6px; box-shadow: 0 0 0 3px var(--sapin), 0 0 0 5px var(--ivoire); }
+.picto-clair { color: var(--ivoire); }
+.modal-corps { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px 16px; }
+.modal-question { font-size: 19px; font-weight: 600; }
+.choix { display: flex; flex-direction: column; gap: 12px; }
+body.mode-large .choix { flex-direction: row; }
+body.mode-large .choix .choix-bouton { flex: 1; }
+.choix-bouton { flex-direction: column; align-items: flex-start; justify-content: center; gap: 4px; width: 100%; min-height: 84px; padding: 12px 16px;
+  border-radius: 16px; text-align: left; }
+.choix-titre { font-size: 21px; font-weight: 600; }
+.choix-detail { font-size: 16px; font-weight: 500; line-height: 1.3; }
+.choix-difficile { border-color: var(--cuivre); background: #F6EBDD; box-shadow: 0 3px 0 var(--cuivre); }
+.choix-difficile .choix-titre { color: var(--cuivre-fonce); }
+
+/* ---------------------------------------------------------------- échauffement (vue 5) */
+.echauffement { flex: 1; width: 100%; max-width: 760px; margin: 0 auto; padding: 14px 16px 18px; }
+.echauffement-liste { display: flex; flex-direction: column; gap: 10px; }
+.echauffement-ligne { display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; border-radius: 16px; background: var(--papier);
+  border: 2px solid var(--filet); }
+.echauffement-nom { flex: 1; min-width: 0; font-size: 17px; font-weight: 600; line-height: 1.28; }
+.echauffement-dose { flex: none; min-width: 76px; text-align: right; font-size: 28px; font-weight: 600; line-height: 1; white-space: nowrap; }
+.echauffement-dose small { font-size: 16px; margin-left: 4px; }
+.chrono { flex: none; min-width: 112px; display: flex; flex-direction: column; gap: 8px; }
+.chrono-temps { display: flex; align-items: center; justify-content: flex-end; gap: 8px; font-size: 28px; font-weight: 600; line-height: 1; white-space: nowrap;
+  font-variant-numeric: tabular-nums; }
+.chrono .minuteur-etape { text-align: right; }
+.securite-ligne { width: 100%; max-width: 760px; font-size: 16px; line-height: 1.32; }
+.securite-ligne b { font-weight: 600; color: var(--sapin); }
+
+/* Tablette : l'échauffement se lit debout, à quelques pas. */
+body.mode-large .echauffement-ligne { padding: 14px 20px; gap: 16px; }
+body.mode-large .echauffement-nom { font-size: 21px; }
+body.mode-large .echauffement-dose, body.mode-large .chrono-temps { font-size: 34px; }
+body.mode-large .echauffement-dose small { font-size: 19px; }
+body.mode-large .chrono { min-width: 150px; }
+body.mode-large .chrono .bouton-minuteur { font-size: 19px; }
+body.mode-large .securite-ligne { font-size: 18px; }
+
+/* ---------------------------------------------------------------- minuteur (cartes et échauffement) */
+.anneau { flex: none; display: block; }
+.anneau .fond { fill: none; stroke: var(--filet); stroke-width: 5; }
+.anneau .reste { fill: none; stroke: var(--sapin); stroke-width: 5; stroke-linecap: round; }
+.en-cours .anneau .reste { stroke: var(--joueur, var(--sapin)); }
+.bouton-minuteur { min-height: var(--tactile); padding: 0 8px; font-size: 17px; }
+.minuteur { display: flex; flex-direction: column; gap: 10px; }
+.minuteur-affichage { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 12px; font-weight: 600; white-space: nowrap; }
+.minuteur-temps { font-size: 40px; line-height: 1; font-variant-numeric: tabular-nums; }
+.minuteur-principal .minuteur-temps { font-size: 80px; font-size: clamp(64px, 11.4dvh, 96px); line-height: .92; letter-spacing: -.02em; word-spacing: -.08em; }
+.minuteur-cote { font-size: 30px; }
+.minuteur-etape { font-size: 16px; font-weight: 600; color: var(--cuivre-fonce); }
+.minuteur-commande { display: flex; align-items: center; gap: 12px; }
+.minuteur-commande .bouton { flex: 1; border-color: var(--joueur, var(--cacao)); border-width: 3px; }
+
+/* ---------------------------------------------------------------- l'effort : onglets et cartes (vues 9, 10 et 16) */
+.onglets { flex: none; display: flex; align-items: flex-end; gap: 6px; padding: 12px 12px 0; }
+/* Teinte des onglets inactifs : 20 % de la couleur du joueur sur le papier. Repli sans color-mix() : le papier à 80 %
+   posé sur la couleur donne exactement la même teinte. */
+.onglet { flex: 1 1 0; min-width: 0; height: var(--tactile); padding: 0 6px; border-radius: 14px 14px 0 0; display: flex; align-items: center; justify-content: center;
+  justify-content: safe center; gap: 6px; font-weight: 600; font-size: 17px; white-space: nowrap; color: var(--cacao); border-top: 4px solid var(--joueur);
+  background: linear-gradient(rgba(255, 253, 248, .8), rgba(255, 253, 248, .8)), var(--joueur);
+  background: color-mix(in srgb, var(--joueur) 20%, var(--papier)); }
+.onglet.actif { height: 62px; font-size: 20px; background: var(--joueur); color: var(--joueur-texte); }
+/* Le prénom rétrécit avec des points de suspension : sa première lettre ne disparaît jamais. La coche et le
+   temps restant gardent leur place à côté. */
+.onglet-nom { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.onglet-temps, .onglet .picto { flex: none; }
+.onglet-temps { font-variant-numeric: tabular-nums; }
+.onglet .picto { stroke-width: 1.6; }
+/* À partir de trois joueurs, la coche ou le temps passe sous le prénom, qui garde toute la largeur de l'onglet. */
+.onglets-serres .onglet { flex-direction: column; justify-content: center; gap: 0; padding: 0 4px; line-height: 1.12; }
+.onglets-serres .onglet-temps { font-size: .8em; font-weight: 500; }
+.onglets-serres .onglet .picto { width: 16px; height: 16px; }
+.onglets-4 .onglet { font-size: 15px; }
+.onglets-4 .onglet.actif { flex-grow: 1.3; font-size: 17px; }
+.cartes { flex: 1; min-height: 0; display: flex; padding: 12px 12px calc(16px + env(safe-area-inset-bottom)); }
+.cartes-onglet { padding-top: 0; }
+.carte { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--papier);
+  border: 2px solid var(--joueur); border-radius: 18px; box-shadow: 0 4px 0 var(--filet); box-shadow: 0 4px 0 color-mix(in srgb, var(--joueur) 35%, transparent); }
+.cartes-onglet .carte { border-radius: 0 0 18px 18px; }
+.carte.faite { box-shadow: none; }
+.carte-entete { display: none; }
+.carte-reste { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; padding: 8px 14px; font-weight: 600; font-size: 16px;
+  background: linear-gradient(rgba(255, 253, 248, .86), rgba(255, 253, 248, .86)), var(--joueur); border-bottom: 1px solid var(--filet);
+  background: color-mix(in srgb, var(--joueur) 14%, var(--papier)); border-bottom: 1px solid color-mix(in srgb, var(--joueur) 30%, transparent); }
+.carte-reste .picto { color: var(--sapin); }
+.carte-niveau { margin-left: auto; font-size: 16px; padding: 2px 11px; border-radius: 20px; background: var(--joueur); color: var(--joueur-texte); white-space: nowrap; }
+.carte-corps { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 12px 16px 4px; overflow: hidden; }
+/* L'écran d'effort a la hauteur de la fenêtre. Le bas de la carte (dosage, minuteur, « Fait », liens) garde toute sa
+   place, jamais rogné ni caché sous le bord : le haut (type, titre, description) prend ce qui reste. Si la description
+   ne tient pas, c'est elle qui défile dans la carte, avec au moins trois lignes visibles tant que la carte a la
+   place ; le haut défile à son tour en dernier recours (écran minuscule). */
+.ecran-effort:not(.ecran-meteo) { height: 100vh; height: 100dvh; min-height: 0; }
+.carte-haut { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; }
+.carte-haut > * { flex: none; }
+.carte-haut > .carte-description { flex: 0 1 auto; min-height: 4.14em; overflow-y: auto; overscroll-behavior: contain; }
+/* Indice discret : une zone qui défile se fond en bas tant qu'il reste du texte dessous (src/vue-effort.js pose .a-suite). */
+.a-suite { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent); }
+.carte-type { display: flex; align-items: center; gap: 7px; min-height: 28px; font-size: 14px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--sapin); }
+.puce-exo { flex: none; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--cuivre); }
+.carte-materiel { margin-left: auto; font-size: 16px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--sapin); background: var(--sapin-voile);
+  border-radius: 8px; padding: 3px 10px; }
+.carte-titre { font-weight: 600; font-size: 26px; line-height: 1.12; margin-top: 6px; overflow-wrap: break-word; }
+.carte-allege { align-self: flex-start; margin-top: 10px; font-size: 16px; font-weight: 600; line-height: 1.2; color: var(--cuivre-fonce); background: #F6EBDD;
+  border-left: 4px solid var(--cuivre); border-radius: 4px; padding: 5px 12px 5px 10px; }
+.carte-description { font-size: 17px; line-height: 1.38; margin-top: 10px; }
+.carte-bas { flex: none; display: flex; flex-direction: column; gap: 8px; padding-top: 10px; }
+.carte-dosage { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 14px; font-weight: 600; font-size: 96px; font-size: clamp(72px, 14dvh, 120px); line-height: .92;
+  letter-spacing: -.02em; word-spacing: -.22em; }
+.carte-dosage small { font-size: 34px; letter-spacing: 0; word-spacing: 0; }
+.carte-dosage-long { font-size: 68px; font-size: clamp(52px, 10dvh, 84px); }
+.carte-dosage-texte { font-size: 28px; line-height: 1.2; letter-spacing: 0; word-spacing: 0; }
+.carte-actions { display: flex; flex-direction: column; gap: 8px; }
+.bouton-fait { min-height: 68px; font-size: 26px; }
+.carte-liens { display: flex; justify-content: space-between; gap: 12px; }
+.lien-carte { min-height: var(--tactile); display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 2px; font-size: 17px; font-weight: 600;
+  text-decoration: underline; text-underline-offset: 5px; text-decoration-color: var(--cuivre); background: none; border: 0; }
+.carte.faite .carte-corps > :not(.carte-bas), .carte.faite .carte-dosage { opacity: .55; }
+.carte-bilan { min-height: 64px; display: flex; align-items: center; justify-content: center; gap: 12px; border-radius: var(--rayon); background: var(--sapin-voile);
+  color: var(--sapin); font-weight: 600; font-size: 24px; }
+.bilan-coche { stroke-width: 1.5; }
+
+body.mode-large .ecran-effort { height: 100vh; height: 100dvh; }
+/* Cartes côte à côte (mode large, quand la fenêtre leur laisse la place : mise-en-page.js, disposition). Tout est à l'échelle de
+   la maquette : --ech pour les gros textes, --ech2 pour les autres, chacune égale à sa base (--e0, --e2 : selon la largeur et le
+   nombre de cartes) fois --v. --v vaut 1 px à partir de 1040 px de haut (la maquette) et rétrécit avec la fenêtre
+   en dessous (98 % à 1024 px de haut, 95 % à 1000, 76 % à 840, 62 % à 720) : le contenu le plus long de la bibliothèque garde sa place, et au-delà de ce que la fenêtre permet, l'écran passe
+   aux onglets (disposition() : les seuils sont mesurés avec ces règles). Les textes de lecture ont un plancher. */
+.ecran-effort-cotes .cartes { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: minmax(0, 1fr); gap: 12px; padding: 14px 16px calc(18px + env(safe-area-inset-bottom));
+  --e0: 1.42; --e2: 1.18; --v: min(1px, calc((100vh - 200px) / 840)); --ech: calc(var(--e0) * var(--v)); --ech2: calc(var(--e2) * var(--v)); }
+.ecran-effort-cotes .cartes-1 { grid-template-columns: minmax(0, 820px); justify-content: center; }
+.ecran-effort-cotes .cartes-2 { grid-template-columns: repeat(2, minmax(0, 640px)); justify-content: center; }
+.ecran-effort-cotes .cartes-4 { grid-template-columns: repeat(4, 1fr); --e0: 1.12; --e2: 1; }
+@media (max-width: 1199px) {
+  .ecran-effort-cotes .cartes { --e0: 1.2; --e2: 1.05; }
+  .ecran-effort-cotes .cartes-4 { --e0: 1; --e2: .9; }
+}
+.ecran-effort-cotes .carte-entete { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: max(46px, calc(56 * var(--ech2)));
+  padding: 5px 16px; background: var(--joueur); color: var(--joueur-texte); }
+/* Le prénom tient sur une ligne : un long prénom rétrécit avec des points de suspension (le niveau garde sa place), l'en-tête ne grandit pas. */
+.ecran-effort-cotes .carte-prenom { font-weight: 600; font-size: max(20px, calc(28 * var(--ech))); line-height: 1.1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ecran-effort-cotes .carte-entete .carte-niveau { margin: 0; flex: none; font-size: max(14px, calc(18 * var(--ech2))); padding: 4px 14px;
+  background: rgba(58, 46, 34, .16); background: color-mix(in srgb, var(--joueur-texte) 22%, transparent); color: var(--joueur-texte); }
+.ecran-effort-cotes .carte-reste { padding: 7px 18px; font-size: max(15px, calc(20 * var(--ech2))); }
+.ecran-effort-cotes .carte-corps { padding: 10px 20px 10px; }
+.ecran-effort-cotes .carte-type { gap: 8px; min-height: 30px; min-height: max(26px, calc(30 * var(--v))); font-size: max(12px, calc(14 * var(--ech2))); }
+.ecran-effort-cotes .carte-materiel { font-size: max(14px, calc(18 * var(--ech2))); padding: 3px 14px; border-radius: 10px; }
+.ecran-effort-cotes .carte-titre { margin-top: 6px; font-size: max(25px, calc(32 * var(--ech))); line-height: 1.1; }
+.ecran-effort-cotes .carte-allege { margin-top: 6px; font-size: max(14px, calc(18 * var(--ech2))); }
+.ecran-effort-cotes .carte-haut > .carte-description { min-height: 3.9em; margin-top: 8px; font-size: max(17px, calc(23 * var(--ech2))); line-height: 1.3; }
+.ecran-effort-cotes .carte-bas { gap: 8px; padding-top: 6px; }
+.ecran-effort-cotes .carte-dosage { gap: 0 14px; font-size: max(56px, calc(64 * var(--ech))); line-height: 1; letter-spacing: -.01em; word-spacing: -.2em; }
+.ecran-effort-cotes .carte-dosage small { font-size: max(24px, calc(30 * var(--ech2))); }
+.ecran-effort-cotes .carte-dosage-long { font-size: max(44px, calc(46 * var(--ech))); }
+.ecran-effort-cotes .minuteur { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-height: max(54px, calc(66 * var(--ech2))); padding: 8px 8px 8px 12px; border-radius: 14px; background: var(--ivoire); }
+/* Anneau, temps et bouton sur une ligne ; si la carte est trop étroite, le bouton passe dessous et prend toute la largeur
+   (jamais collé au temps, ni par-dessus). */
+.ecran-effort-cotes .minuteur-bloc { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.ecran-effort-cotes .minuteur-affichage { flex-wrap: nowrap; gap: 6px; }
+.ecran-effort-cotes .minuteur-temps, .ecran-effort-cotes .minuteur-principal .minuteur-temps { font-size: max(44px, calc(54 * var(--ech))); line-height: 1; letter-spacing: 0; word-spacing: 0; }
+.ecran-effort-cotes .minuteur-cotes .minuteur-temps { font-size: max(40px, calc(44 * var(--ech))); }
+.ecran-effort-cotes .minuteur-cote { font-size: max(18px, calc(22 * var(--ech2))); }
+.ecran-effort-cotes .minuteur-etape { font-size: max(13px, calc(14 * var(--ech2))); }
+.ecran-effort-cotes .minuteur .bouton-minuteur { flex: 1 0 auto; min-height: 68px; min-height: max(56px, calc(68 * var(--v))); padding: 0 16px; font-size: max(17px, calc(20 * var(--ech2))); border-color: var(--joueur, var(--cacao)); border-width: 2px; }
+.ecran-effort-cotes .minuteur-cotes .bouton-minuteur { flex: 1 1 100%; min-height: 60px; min-height: max(56px, calc(60 * var(--v))); }
+.ecran-effort-cotes .bouton-fait { min-height: 78px; min-height: max(60px, calc(78 * var(--v))); font-size: max(22px, calc(26 * var(--ech2))); }
+.ecran-effort-cotes .carte-actions { gap: 4px; }
+.ecran-effort-cotes .carte-liens { flex-wrap: wrap; gap: 0 8px; }
+.ecran-effort-cotes .lien-carte { min-height: 60px; min-height: max(56px, calc(60 * var(--v))); font-size: max(16px, calc(18 * var(--ech2))); white-space: nowrap; }
+.ecran-effort-cotes .lien-trop-dur { flex: 1 1 auto; justify-content: flex-start; }
+.ecran-effort-cotes .carte-bilan { min-height: 78px; min-height: max(60px, calc(78 * var(--v))); font-size: max(22px, calc(26 * var(--ech2))); }
+
+/* Mode large, mais cartes en onglets (la fenêtre n'a pas la place de les mettre côte à côte) : la carte du téléphone, étirée.
+   La fenêtre est large et basse : le bas de la carte se range sur deux colonnes (dosage ou minuteur à gauche, « Fait » et liens
+   à droite), le bandeau se resserre, et la description garde ses trois lignes. */
+body.mode-large .ecran-effort:not(.ecran-effort-cotes) .bandeau { min-height: calc(64px + env(safe-area-inset-top)); padding-top: calc(4px + env(safe-area-inset-top)); padding-bottom: 4px; }
+body.mode-large .ecran-effort:not(.ecran-effort-cotes) .bandeau .bouton { min-height: var(--tactile); }
+body.mode-large .ecran-effort:not(.ecran-effort-cotes) .titre-ecran { font-size: 34px; }
+body.mode-large .ecran-effort:not(.ecran-effort-cotes) .carte-bas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: end; gap: 6px 20px; }
+body.mode-large .ecran-effort:not(.ecran-effort-cotes) .carte-bas > * { grid-column: 1; min-width: 0; }
+body.mode-large .ecran-effort:not(.ecran-effort-cotes) .carte-bas > .carte-actions { grid-column: 2; grid-row: 1 / span 2; }
+body.mode-large .ecran-effort:not(.ecran-effort-cotes) .carte-haut > .carte-description { min-height: 3.9em; }
+body.mode-large .ecran-effort:not(.ecran-effort-cotes) .minuteur-principal .minuteur-temps { font-size: 64px; font-size: clamp(64px, 8.4dvh, 80px); }
+
+/* ---------------------------------------------------------------- météo, refuge et annonces (vue 11) */
+.decor-montagne { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 210px; pointer-events: none; }
+.decor-montagne .m2 { fill: none; stroke: var(--cuivre); stroke-width: 1.5; opacity: .55; vector-effect: non-scaling-stroke; }
+.decor-montagne .m1 { fill: #F2EBDF; stroke: none; }
+.etape-seule { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+  width: 100%; padding: 0 max(24px, calc((100% - 640px) / 2)) calc(40px + env(safe-area-inset-bottom)); text-align: center; }
+.etape-seule > * { position: relative; }
+.etape-seule > .decor-montagne { position: absolute; }
+.etape-picto { width: 124px; height: 124px; border-radius: 50%; background: var(--sapin-voile); color: var(--sapin); display: flex; align-items: center; justify-content: center; }
+.etape-titre { font-family: "Italiana", serif; font-weight: 400; font-size: 58px; line-height: 1; letter-spacing: .03em; text-wrap: balance; }
+.ecran-annonce .etape-titre { font-size: 46px; }
+.etape-texte { font-size: 21px; line-height: 1.36; }
+.etape-seule .bouton { align-self: stretch; margin-top: 14px; }
+.etape-bandeau { display: flex; align-items: center; gap: 10px; margin: 10px 12px 0; padding: 10px 14px; border-radius: 12px; background: var(--sapin-voile); color: var(--sapin); font-weight: 600; }
+.etape-bandeau .picto { flex: none; }
+.etape-annulation { margin: 8px 12px 0; padding: 8px 12px; border-radius: 10px; background: #F6EBDD; color: var(--cuivre-fonce); font-weight: 600; }
+.etape-seule .etape-annulation { margin: 0; }
+body.mode-large .etape-titre { font-size: 72px; }
+body.mode-large .ecran-annonce .etape-titre { font-size: 56px; }
+body.mode-large .etape-texte { font-size: 26px; }
+body.mode-large .etape-seule .bouton { min-height: 72px; font-size: 26px; }
+.ecran-erreur .etape-seule .bouton { width: 100%; }
+
+/* ---------------------------------------------------------------- podium (vue 12) */
+.ecran-podium { position: relative; overflow: hidden; }
+.decor-podium { bottom: 86px; height: 250px; }
+.podium-tete { position: relative; text-align: center; padding: calc(12px + env(safe-area-inset-top)) 20px 0; }
+.titre-podium { font-family: "Italiana", serif; font-weight: 400; font-size: 64px; line-height: 1; letter-spacing: .04em; margin: 6px 0 0; }
+.podium-tete .crete { height: 30px; width: 100%; max-width: 350px; margin: 8px auto 10px; }
+.sous-titre { font-size: 17px; line-height: 1.35; }
+.podium-chrono { font-size: 16px; line-height: 1.35; margin-top: 6px; }
+.podium { position: relative; flex: 1; min-height: 0; display: flex; align-items: flex-end; justify-content: center; padding: 0 20px; }
+.marche { flex: 1 1 0; min-width: 0; max-width: 220px; display: flex; flex-direction: column; align-items: center; }
+.marche-grimpeurs { position: relative; width: 100%; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; gap: 8px; margin-bottom: 12px; }
+/* --taille vient de l'écran (80, 66 ou 60 px) ; --echelle la réduit sur les petites largeurs, quand quatre marches se partagent 320 px. */
+.grimpeur { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
+.grimpeur i { width: calc(var(--taille) * var(--echelle, 1)); height: calc(var(--taille) * var(--echelle, 1)); border-radius: 50%; background: var(--joueur); color: var(--joueur-texte);
+  display: flex; align-items: center; justify-content: center; font-style: normal; font-weight: 600; font-size: calc(var(--taille) * var(--echelle, 1) * .46); line-height: 1;
+  box-shadow: 0 0 0 4px var(--ivoire), 0 6px 14px rgba(58, 46, 34, .3); }
+/* Un prénom long ne déborde jamais de sa marche : une ligne, points de suspension. */
+.grimpeur b { display: block; font-weight: 600; font-size: 20px; line-height: 1.1; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+.podium-4 .grimpeur b { font-size: 16px; }
+.podium-drapeau { position: absolute; top: -42px; left: 50%; margin-left: -17px; color: var(--cuivre); }
+.marche-bloc { width: 100%; display: flex; flex-direction: column; align-items: center; padding-top: 12px; color: var(--ivoire); border-radius: 12px 12px 0 0; }
+.marche-rang { font-weight: 600; font-size: 46px; line-height: 1; }
+.marche-rang sup { font-size: 18px; vertical-align: top; position: relative; top: 5px; margin-left: 2px; }
+.marche-note { font-size: 13px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
+/* Hauteur des marches : un repli en px, puis la mesure sur la fenêtre (dvh) pour les navigateurs qui la connaissent. */
+.marche-1 .marche-bloc { height: 150px; height: clamp(100px, 22.5dvh, 190px); background: var(--cuivre); }
+.marche-2 .marche-bloc { height: 110px; height: clamp(80px, 16.6dvh, 140px); background: var(--sapin); }
+.marche-3 .marche-bloc, .marche-4 .marche-bloc { height: 80px; height: clamp(60px, 11.6dvh, 98px); background: #6E7F6E; }
+.pied-podium { position: relative; }
+.lien-accueil { border: 0; background: none; min-height: var(--tactile); font-size: 17px; text-decoration: underline; text-underline-offset: 5px; text-decoration-color: var(--cuivre); }
+body.mode-large .titre-podium { font-size: 88px; }
+body.mode-large .sous-titre { font-size: 22px; }
+body.mode-large .podium-chrono { font-size: 19px; }
+body.mode-large .marche { max-width: 280px; }
+body.mode-large .marche-1 .marche-bloc { height: 240px; height: clamp(100px, 32dvh, 330px); }
+body.mode-large .marche-2 .marche-bloc { height: 180px; height: clamp(80px, 24dvh, 250px); }
+body.mode-large .marche-3 .marche-bloc, body.mode-large .marche-4 .marche-bloc { height: 130px; height: clamp(60px, 17dvh, 180px); }
+
+/* Téléphone de 375 px et moins : la ligne « Sommet dans N cases » et le niveau tiennent sur une seule ligne. */
+@media (max-width: 389px) {
+  .carte-reste, .carte-niveau { font-size: 15px; }
+  .carte-reste { padding: 8px 12px; gap: 2px 6px; }
+}
+
+/* Petit téléphone (320 px) : titres de la partie un peu plus serrés, pour qu'ils tiennent sur une ou deux lignes. */
+@media (max-width: 359px) {
+  .titre-tour { font-size: 25px; }
+  .titre-tour .nom-joueur { font-size: 19px; padding: 0 7px; }
+  .titre-tour .chiffre-de { font-size: 25px; }
+  .carte-reste, .carte-niveau { font-size: 14px; }
+  .carte-reste { padding: 8px 10px; gap: 2px 6px; }
+  .carte-niveau { padding: 2px 9px; }
+  .carte-corps { padding: 12px 12px 4px; }
+  .onglet { font-size: 15px; }
+  .onglet.actif { font-size: 17px; }
+  .onglets { padding: 8px 8px 0; gap: 4px; }
+  .onglets-4 .onglet { font-size: 13px; padding: 0 3px; }
+  .onglets-4 .onglet.actif { font-size: 15px; }
+  .carte-dosage small { font-size: 26px; }
+  .minuteur-cote { font-size: 22px; }
+}
+
+/* Podium sur téléphone : trois ou quatre marches côte à côte se partagent la largeur (320 px : 76 px chacune). Les grimpeurs
+   rétrécissent, les prénoms passent en 15 px avec des points de suspension, les marges se resserrent. */
+@media (max-width: 389px) {
+  .podium { padding: 0 8px; --echelle: .85; }
+  .podium-3, .podium-4 { --echelle: .8; }
+  .marche-grimpeurs { gap: 4px; }
+  .grimpeur { gap: 6px; }
+  .podium .grimpeur b { font-size: 15px; }
+}
+@media (max-width: 359px) {
+  .titre-podium { font-size: 52px; }
+}
+
+/* Téléphone court (iPhone SE, 667 px ou moins) : la carte d'effort se resserre pour tenir sans faire défiler la page. */
+@media (max-height: 720px) {
+  .ecran-effort:not(.ecran-effort-cotes) .carte-corps { padding-top: 8px; }
+  .ecran-effort:not(.ecran-effort-cotes) .carte-titre { font-size: 22px; margin-top: 4px; }
+  .ecran-effort:not(.ecran-effort-cotes) .carte-description { font-size: 16px; line-height: 1.3; margin-top: 6px; }
+  .ecran-effort:not(.ecran-effort-cotes) .carte-allege { margin-top: 6px; padding-top: 3px; padding-bottom: 3px; }
+  .ecran-effort:not(.ecran-effort-cotes) .carte-dosage { font-size: 72px; font-size: clamp(64px, 10.5dvh, 120px); }
+  .ecran-effort:not(.ecran-effort-cotes) .minuteur-principal .minuteur-temps { font-size: 64px; font-size: clamp(64px, 8.4dvh, 96px); }
+  .ecran-effort:not(.ecran-effort-cotes) .carte-bas { gap: 6px; padding-top: 6px; }
+  .ecran-effort:not(.ecran-effort-cotes) .bouton-fait { min-height: 56px; font-size: 24px; }
+  .ecran-effort:not(.ecran-effort-cotes) .onglet.actif { height: 58px; }
+  /* Marges, bandeau et bandeau de carte plus serrés : « Fait » reste visible sans défiler. */
+  .ecran-effort:not(.ecran-effort-cotes) .bandeau { min-height: 56px; padding-bottom: 6px; }
+  .ecran-effort:not(.ecran-effort-cotes) .bandeau-sous { font-size: 14px; line-height: 1.15; margin-top: 1px; }
+  .ecran-effort:not(.ecran-effort-cotes) .onglets { padding-top: 6px; }
+  .ecran-effort:not(.ecran-effort-cotes) .cartes { padding: 6px 10px calc(8px + env(safe-area-inset-bottom)); }
+  .ecran-effort:not(.ecran-effort-cotes) .cartes-onglet { padding-top: 0; }
+  .ecran-effort:not(.ecran-effort-cotes) .carte-reste { padding-top: 4px; padding-bottom: 4px; }
+  .ecran-effort:not(.ecran-effort-cotes) .carte-haut > .carte-description { min-height: 2.8em; }
+  .ecran-effort:not(.ecran-effort-cotes) .minuteur { gap: 4px; }
+  /* Minuteur à deux côtés : « Côté 1 sur 2 » prend la ligne de l'anneau et du bouton (display: contents laisse la grille les placer),
+     le temps garde la sienne : vingt pixels de plus pour la description. */
+  .ecran-effort:not(.ecran-effort-cotes) .minuteur-cotes { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 2px 10px; }
+  .ecran-effort:not(.ecran-effort-cotes) .minuteur-cotes .minuteur-commande { display: contents; }
+  .ecran-effort:not(.ecran-effort-cotes) .minuteur-cotes .minuteur-affichage { grid-column: 1 / -1; grid-row: 1; }
+  .ecran-effort:not(.ecran-effort-cotes) .minuteur-cotes .anneau { grid-column: 1; grid-row: 2; }
+  .ecran-effort:not(.ecran-effort-cotes) .minuteur-cotes .minuteur-etape { grid-column: 2; grid-row: 2; font-size: 14px; line-height: 1.15; }
+  .ecran-effort:not(.ecran-effort-cotes) .minuteur-cotes .bouton-minuteur { grid-column: 3; grid-row: 2; min-width: 112px; padding: 0 10px; }
+  /* Météo : le bandeau de la règle du jour et la mention « Le col de ce tour est annulé » se resserrent (corps 14 px, marges
+     réduites) : ils se posent au-dessus des onglets et mangeaient la place du titre et de la description. */
+  .ecran-effort:not(.ecran-effort-cotes) .etape-bandeau { gap: 8px; margin: 6px 10px 0; padding: 5px 10px; font-size: 14px; line-height: 1.22; }
+  .ecran-effort:not(.ecran-effort-cotes) .etape-bandeau .picto { width: 18px; height: 18px; }
+  .ecran-effort:not(.ecran-effort-cotes) .etape-annulation { margin: 4px 10px 0; padding: 3px 10px; font-size: 14px; line-height: 1.2; }
+  /* Le nom du type (« Crevasse · Respiration et retour au calme ») tient sur une ligne, la place va à la description. */
+  .ecran-effort:not(.ecran-effort-cotes) .carte-type { min-height: 22px; }
+  .ecran-effort:not(.ecran-effort-cotes) .carte-type-nom { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ecran-effort:not(.ecran-effort-cotes) .carte-materiel { flex: none; white-space: nowrap; }
+  .ecran-effort:not(.ecran-effort-cotes) .carte-titre { font-size: 20px; }
+  .ecran-effort:not(.ecran-effort-cotes) .carte-actions { gap: 4px; }
+}
+
+/* Fenêtre très basse (580 px ou moins : iPhone SE dans un onglet de Safari, 320 × 568, fenêtre large de 500 px) : la barre « Sommet
+   dans N cases » et le haut de la carte se resserrent encore, pour que la description garde une ligne de plus. Le dosage et le
+   grand minuteur, eux, ne passent jamais sous 64 px (tests/style.test.js). */
+@media (max-height: 580px) {
+  .ecran-effort:not(.ecran-effort-cotes) .carte-reste { padding-top: 3px; padding-bottom: 3px; }
+  .ecran-effort:not(.ecran-effort-cotes) .carte-corps { padding-top: 6px; }
+}
+
+/* Téléphone court : les écrans d'annonce (météo, refuge, « Petit souci ») tiennent sans faire défiler la page. */
+@media (max-height: 720px) {
+  body:not(.mode-large) .etape-seule { gap: 8px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+  body:not(.mode-large) .etape-picto { width: 84px; height: 84px; }
+  body:not(.mode-large) .etape-picto .picto { width: 52px; height: 52px; }
+  body:not(.mode-large) .etape-titre { font-size: 44px; }
+  body:not(.mode-large) .ecran-annonce .etape-titre { font-size: 36px; }
+  body:not(.mode-large) .etape-texte { font-size: 19px; line-height: 1.3; }
+  body:not(.mode-large) .etape-seule .bouton { margin-top: 6px; }
+}
+
+/* Petit téléphone court (320 × 568) : le sous-titre du bandeau et la ligne « Sommet dans N cases » + niveau tiennent sur une
+   seule ligne, ce qui rend de la place à « Fait » et aux liens. */
+@media (max-width: 359px) and (max-height: 720px) {
+  .ecran-effort:not(.ecran-effort-cotes) .bandeau-sous { font-size: 13px; letter-spacing: -.01em; }
+  .ecran-effort:not(.ecran-effort-cotes) .carte-reste { padding: 4px 8px; font-size: 13px; }
+  .ecran-effort:not(.ecran-effort-cotes) .carte-reste .carte-niveau { font-size: 13px; padding: 1px 8px; }
+}
+
+/* Téléphone court (320 × 568, 375 × 667, Android de 720 px) : le podium tient sans faire défiler la page, les boutons du pied restent visibles. */
+@media (max-height: 720px) {
+  body:not(.mode-large) .ecran-podium .podium-tete { padding-top: calc(8px + env(safe-area-inset-top)); }
+  body:not(.mode-large) .ecran-podium .titre-podium { font-size: 52px; margin-top: 2px; }
+  body:not(.mode-large) .ecran-podium .podium-tete .crete { height: 24px; margin: 2px auto 6px; }
+  body:not(.mode-large) .ecran-podium .sous-titre { font-size: 15px; line-height: 1.3; }
+  body:not(.mode-large) .ecran-podium .podium-chrono { font-size: 14px; line-height: 1.3; margin-top: 4px; }
+  body:not(.mode-large) .ecran-podium .marche-grimpeurs { margin-bottom: 8px; }
+  body:not(.mode-large) .ecran-podium .podium-drapeau { top: -36px; }
+  body:not(.mode-large) .ecran-podium .marche-bloc { padding-top: 8px; }
+  body:not(.mode-large) .ecran-podium .marche-rang { font-size: 34px; }
+  body:not(.mode-large) .ecran-podium .marche-rang sup { font-size: 14px; top: 3px; }
+  body:not(.mode-large) .ecran-podium .marche-1 .marche-bloc { height: 84px; height: clamp(84px, 14dvh, 190px); }
+  body:not(.mode-large) .ecran-podium .marche-2 .marche-bloc { height: 64px; height: clamp(64px, 10.5dvh, 140px); }
+  body:not(.mode-large) .ecran-podium .marche-3 .marche-bloc, body:not(.mode-large) .ecran-podium .marche-4 .marche-bloc { height: 50px; height: clamp(50px, 8dvh, 98px); }
+  body:not(.mode-large) .ecran-podium .pied { gap: 4px; padding-top: 8px; padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+  body:not(.mode-large) .ecran-podium .pied .bouton-large { min-height: 56px; font-size: 20px; }
+}
