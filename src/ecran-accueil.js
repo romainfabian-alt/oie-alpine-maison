@@ -5,10 +5,27 @@
   var F = (typeof require !== "undefined") ? require("./format.js") : global.Format;
 
   var LIENS = [
-    { texte: "Prendre rendez-vous", href: "https://maddie.doctor/cabinet/kine/tignes/cabinet-kine-sport" },
-    { texte: "Instagram du cabinet", href: "https://www.instagram.com/kinesport.tignes/" },
-    { texte: "Suivi à distance avec Andrew", href: "https://mammoth-rubidium-b20.notion.site/Suivi-distance-avec-Andrew-3750d78836f781be8cfcff1995103c47" }
+    { texte: "Prendre rendez-vous", href: "https://maddie.doctor/cabinet/kine/tignes/cabinet-kine-sport", icone: "maddie" },
+    { texte: "Instagram du cabinet", href: "https://www.instagram.com/kinesport.tignes/", icone: "instagram" },
+    { texte: "Suivi à distance avec Andrew", href: "https://mammoth-rubidium-b20.notion.site/Suivi-distance-avec-Andrew-3750d78836f781be8cfcff1995103c47", icone: "andrew" }
   ];
+
+  // Petits logos des services, redessinés d'une seule couleur (celle du lien) d'après
+  // les icônes officielles : Maddie (deux « d » reliés comme des lunettes), Instagram
+  // (l'appareil photo arrondi), Andrew (le « A » fait d'une goutte et d'une barre).
+  // Décoratifs : le texte du lien suffit aux lecteurs d'écran. Posés par UI.svg.
+  function picto(contenu) {
+    return '<svg class="picto-lien" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + contenu + '</svg>';
+  }
+  var ICONES = {
+    maddie: picto('<g fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="6.2" cy="15" r="4"/><circle cx="17.6" cy="15" r="4"/>' +
+      '<path d="M10.2 3.6v15.6M21.6 3.6v15.6M10.2 15h3.4"/></g>' +
+      '<circle cx="6.2" cy="15" r="1.5" fill="currentColor"/><circle cx="17.6" cy="15" r="1.5" fill="currentColor"/>'),
+    instagram: picto('<g fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/>' +
+      '<circle cx="12" cy="12" r="4.2"/></g><circle cx="17.3" cy="6.7" r="1.3" fill="currentColor"/>'),
+    andrew: picto('<path d="M12.2 4.6L19.4 19.2" fill="none" stroke="currentColor" stroke-width="4.4" stroke-linecap="round"/>' +
+      '<path d="M7 9.8Q10.7 14.1 10.7 16.5A3.7 3.7 0 1 1 3.3 16.5Q3.3 14.1 7 9.8Z" fill="currentColor"/>')
+  };
   var AVERTISSEMENT = "En cas de doute ou de douleur inhabituelle, parles-en à ton kiné.";
   var PREFIXE = "Partie en cours";
 
@@ -74,7 +91,8 @@
         UI.el("p", { classe: "avertissement", texte: AVERTISSEMENT }),
         // Les deux premiers liens côte à côte, le dernier, plus long, sur sa ligne (maquette).
         UI.el("ul", { classe: "liens-cabinet" }, LIENS.map(function (l, i) {
-          return UI.el("li", { classe: i === LIENS.length - 1 ? "lien-long" : "" }, [UI.el("a", { href: l.href, target: "_blank", rel: "noopener", texte: l.texte })]);
+          return UI.el("li", { classe: i === LIENS.length - 1 ? "lien-long" : "" }, [UI.el("a", { href: l.href, target: "_blank", rel: "noopener" }, [
+            l.icone && ICONES[l.icone] ? UI.svg(ICONES[l.icone]) : null, UI.el("span", { texte: l.texte })])]);
         })),
         // Le logo accompagne le nom écrit à côté : décoratif pour les lecteurs d'écran.
         UI.el("p", { classe: "signature" }, [UI.el("img", { src: "./assets/logo-cabinet.png", alt: "", width: "273", height: "280" }), "Kiné Sport Tignes"])
@@ -82,7 +100,7 @@
     ]));
   }
 
-  var EcranAccueil = { afficher: afficher, texteReprise: texteReprise, LIENS: LIENS, AVERTISSEMENT: AVERTISSEMENT };
+  var EcranAccueil = { afficher: afficher, texteReprise: texteReprise, LIENS: LIENS, ICONES: ICONES, AVERTISSEMENT: AVERTISSEMENT };
   if (typeof module !== "undefined" && module.exports) module.exports = EcranAccueil;
   else global.EcranAccueil = EcranAccueil;
 })(typeof globalThis !== "undefined" ? globalThis : this);

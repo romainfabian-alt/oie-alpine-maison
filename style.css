@@ -260,6 +260,8 @@ body.mode-large .pied .bouton-bloc { max-width: 760px; }
 /* Les deux premiers liens côte à côte quand la largeur le permet, sinon l'un sous l'autre ; le dernier, plus long, a sa ligne. */
 .liens-cabinet { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 8px; }
 .liens-cabinet .lien-long { flex-basis: 100%; }
+/* Petit logo du service avant le texte du lien, dans la couleur du lien, non souligné. */
+.liens-cabinet .picto-lien { flex: none; width: 22px; height: 22px; margin-right: 8px; }
 .liens-cabinet a { display: inline-flex; align-items: center; min-height: var(--tactile); white-space: nowrap; font-size: 16px; font-weight: 600; color: var(--sapin);
   text-decoration: underline; text-decoration-color: var(--cuivre); text-underline-offset: 5px; }
 .signature { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--cuivre-fonce); }
