@@ -22,17 +22,17 @@
     return m;
   }
 
-  // Bips du minuteur (cahier des charges, 9.4) : un bip court à 3, 2 et 1 s,
-  // le bip final à 0. precedent : secondes restantes à l'affichage précédent
-  // (un écran resté en arrière-plan ne rattrape qu'un seul bip).
-  function aBiper(precedent, reste) {
+  // Signaux du minuteur (cahier des charges, 9.4) : « court » à 3, 2 et 1 s,
+  // « fin » à 0. precedent : secondes restantes à l'affichage précédent
+  // (un écran resté en arrière-plan ne rattrape qu'un seul signal).
+  function aSignaler(precedent, reste) {
     if (reste === precedent) return null;
     if (reste === 0) return precedent > 0 ? "fin" : null;
     if (reste <= 3 && reste < precedent) return "court";
     return null;
   }
 
-  var Minuteur = { creer: creer, aBiper: aBiper };
+  var Minuteur = { creer: creer, aSignaler: aSignaler };
   if (typeof module !== "undefined" && module.exports) module.exports = Minuteur;
   else global.Minuteur = Minuteur;
 })(typeof globalThis !== "undefined" ? globalThis : this);

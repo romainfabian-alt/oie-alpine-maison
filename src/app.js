@@ -16,7 +16,6 @@
   var MESSAGE_SOUCI_GARDEE = "Un souci est survenu. Ta partie est enregistrée, tu peux la reprendre.";
   var DELAI_MODE = 150;        // ms : on laisse la fenêtre finir de se redimensionner
   var DELAI_ORIENTATION = 500; // ms : iOS annonce parfois l'ancienne taille juste après un changement d'orientation
-  var CLE_SON = "oieMaison.son";
 
   // Le stockage du navigateur peut lever dès qu'on le touche (navigation privée, cookies bloqués) : on rend alors null,
   // et l'app reste jouable sans rien garder.
@@ -24,7 +23,7 @@
     try {
       var s = fen.localStorage;
       if (!s) return null;
-      s.getItem(CLE_SON);
+      s.getItem("oieMaison.reglages");   // lecture pour voir si le stockage répond ; la valeur ne sert pas
       return s;
     } catch (e) { return null; }
   }
@@ -59,7 +58,8 @@
     var stockage = stockageLocal(fen);
     var sauvegarde = global.Sauvegarde.creer(stockage);
     var bib = global.Bibliotheque.defaut();
-    var son = global.SonOie.creer(stockage);   // un seul son pour toute l'app
+    // Le son a été retiré le 22/10/2026 : la préférence qu'il gardait n'a plus d'usage, on la retire des appareils déjà installés.
+    try { if (stockage) stockage.removeItem("oieMaison.son"); } catch (e) { /* stockage bloqué : sans gravité */ }
     var veille = null;
     try { veille = global.Veille.creer(); } catch (e) { veille = null; }   // l'écran de partie en crée une si besoin
 
@@ -210,7 +210,7 @@
       detruirePartieActive();
       partieActive = p;
       ecranPartieActif = global.EcranPartie.afficher(racine, {
-        partie: p, son: son, mode: mode, veille: veille,
+        partie: p, mode: mode, veille: veille,
         taille: function () { return { largeur: fen.innerWidth, hauteur: fen.innerHeight }; },
         surChangement: enregistrer, surFin: finir,
         // « Nouvelle partie » du podium : l'écran s'est déjà détruit lui-même.
@@ -362,7 +362,7 @@
       erreur(e && e.error ? e.error : e && e.message);
     }
 
-    // Une promesse rejetée sans suite (un Wake Lock refusé, un son bloqué) ne doit pas sortir un joueur de sa partie :
+    // Une promesse rejetée sans suite (un Wake Lock refusé, par exemple) ne doit pas sortir un joueur de sa partie :
     // on ne réagit que si la page est vide.
     function surRejet(e) {
       var raison = e && e.reason;

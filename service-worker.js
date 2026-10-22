@@ -1,7 +1,7 @@
 // Numéro de version du cache : à incrémenter (oie-maison-v2, v3...) à CHAQUE
 // modification d'un fichier listé dans FICHIERS, dès que l'app est publiée.
 // Sans ça, les téléphones déjà installés gardent l'ancienne version.
-var CACHE = "oie-maison-v1";
+var CACHE = "oie-maison-v2";
 // Tous les caches de cette application commencent ainsi. L'origine (romainfabian-alt.github.io) est partagée avec d'autres
 // applications du cabinet (L'Oie Alpine, Réactivité), dont le stockage de cache est commun : on ne supprime jamais que
 // les anciens caches de celle-ci.
@@ -41,7 +41,6 @@ var FICHIERS = [
   "./src/parcours.js",
   "./src/estimation.js",
   "./src/minuteur.js",
-  "./src/audio.js",
   "./src/veille.js",
   "./src/mise-en-page.js",
   "./src/ui.js",

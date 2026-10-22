@@ -2,17 +2,33 @@
   // Vue de l'effort : l'échauffement, les cartes d'exercice (côte à côte en
   // mode « large » quand la fenêtre leur laisse la place, sinon en onglets comme sur
   // le téléphone ; maquette validée le 10/10/2026, vues 5, 9, 10, 11 et 16, voir
-  // MiseEnPage.disposition), les minuteurs et leurs bips, le piolet,
+  // MiseEnPage.disposition), les minuteurs et leur signal visuel, le piolet,
   // « Trop dur / douleur » et la météo. Reprend les cartes de L'Oie Alpine.
+  //
+  // Signal du minuteur (le son a été retiré le 22/10/2026 : les bips ne sonnaient pas sur iPhone). Le téléphone est posé au sol, le
+  // patient en plein effort le voit du coin de l'œil : tout est porté par la carte entière (ou la ligne, à l'échauffement), pas
+  // seulement par le chiffre. L'état se pose en classes sur l'élément (style.css les met en forme) :
+  //   signal-depart : un éclair bref au départ (bouton « Démarrer », « Reprendre » ou « Encore ») ;
+  //   signal-compte : les 3 dernières secondes, une impulsion par seconde (signal-pouls-0 / -1 alternent pour la relancer) ;
+  //   signal-fin    : la carte s'illumine trois fois et affiche « Terminé » jusqu'à « Fait » ou au prochain départ ;
+  //   signal-cote2  : la fin du côté 1 d'un exercice « / côté » : « Côté 2 » s'affiche un instant, le côté 2 est déjà lancé.
+  // signal-calme dit que les éclats sont finis (la carte reste allumée, sans bouger : un redessin ne les rejoue pas).
+  // Un joueur dont l'onglet n'est pas affiché le voit sur son onglet (onglet-signal, puis onglet-termine tant qu'on ne l'a pas ouvert).
+  // Tout est daté avec l'horloge du minuteur, sans minuterie en plus : les éclats suivent le tic de 200 ms. Le signal ne bloque jamais
+  // le minuteur : une erreur ici va à la console, sans plus.
   var CIRCONFERENCE = 138.2;   // anneau du minuteur : 2 × π × 22
+  var DUREE_DEPART = 900;      // ms : l'éclair du départ (style.css : 800 ms)
+  var DUREE_ECLATS = 2100;     // ms : trois éclats de 700 ms (style.css, signal-eclat)
+  var DUREE_COTE2 = 2400;      // ms : « Côté 2 » reste affiché, puis le décompte du côté 2 reprend seul la place
+  var MOT_FIN = "Terminé", MOT_COTE2 = "Côté 2";
   var PANNEAU = "panneau-effort";   // le panneau de l'onglet choisi : une seule carte à la fois dans la page
   var SECURITE = (typeof require !== "undefined") ? require("./ecran-regles.js").SECURITE : global.EcranRegles.SECURITE;
 
   function creer(env) {
     var Regles = global.Regles, F = global.Format, PO = global.PartieOutils, RP = global.RenduPlateau,
       Res = global.Resolution, M = global.Minuteur, R = global.Referentiel;
-    var p = env.p, UI = env.UI, doc = env.doc, O = env.O, son = env.son;
-    var minuteurs = [];               // { carte, m, precedent, cote, cotes, etiquettes, maj } : survivent aux redessins
+    var p = env.p, UI = env.UI, doc = env.doc, O = env.O;
+    var minuteurs = [];               // { carte, m, precedent, cote, cotes, etiquettes, maj, signal... } : survivent aux redessins
     var tic = null, onglet = null, ongletEtape = null, chronosEchauffement = {};
     var cotesDessine = null;          // disposition de l'écran d'effort en place (true : cartes côte à côte), null : pas d'écran d'effort
     var zonesSuite = [];              // zones qui défilent dans les cartes : elles portent l'indice « il y a une suite »
@@ -26,9 +42,70 @@
     // enchaîne le côté 1, puis le côté 2 (cote, cotes).
     function minuteurDe(c) {
       for (var i = 0; i < minuteurs.length; i++) if (minuteurs[i].carte === c) return minuteurs[i];
-      var e = { carte: c, m: M.creer(c.secondes), precedent: c.secondes, cote: 1, cotes: c.unilateral ? 2 : 1, etiquettes: [], maj: null };
+      var e = { carte: c, m: M.creer(c.secondes), precedent: c.secondes, cote: 1, cotes: c.unilateral ? 2 : 1, etiquettes: [], maj: null,
+        signal: null, signalDepuis: 0, pouls: 0,       // l'état du signal de la carte et son heure
+        marque: null, marqueDepuis: 0,                  // le repère sur l'onglet d'une carte qu'on ne voit pas
+        carteDom: null, bandeauDom: null, baseCarte: "", ongletDom: null, baseOnglet: "" };   // les éléments affichés, à jour à chaque redessin
       minuteurs.push(e);
       return e;
+    }
+
+    // Ce que l'onglet d'un joueur dit de son minuteur : le repère s'il y en a un, sinon le temps restant une fois démarré.
+    function texteOnglet(e, t) {
+      if (e.marque === "fin") return MOT_FIN;
+      if (e.marque === "cote2") return MOT_COTE2;
+      var reste = e.m.restant(t);
+      return e.m.enMarche || (reste > 0 && (reste < e.carte.secondes || e.cote > 1)) ? " · " + PO.insecable(F.duree(reste)) : "";
+    }
+
+    // ---- le signal visuel
+    function classesSignal(e, t) {
+      var s = e.signal;
+      if (!s) return "";
+      if (s === "compte") return " signal-compte signal-pouls-" + e.pouls;
+      return " signal-" + s + (s !== "depart" && t - e.signalDepuis >= DUREE_ECLATS ? " signal-calme" : "");
+    }
+
+    // Pose l'état du signal sur la carte (ou la ligne) et sur l'onglet affichés, s'ils le sont. Appelée à chaque tic et à chaque
+    // changement : elle ne touche au DOM que si quelque chose a changé.
+    function afficherSignal(e, t) {
+      try {
+        var n = e.carteDom, o = e.ongletDom, mot, classes;
+        if (n) {
+          classes = e.baseCarte + classesSignal(e, t);
+          if (n.className !== classes) n.className = classes;
+          if (e.bandeauDom) {
+            mot = e.signal === "fin" ? MOT_FIN : e.signal === "cote2" ? MOT_COTE2 : "";
+            if (e.bandeauDom.textContent !== mot) e.bandeauDom.textContent = mot;
+          }
+        }
+        if (e.marque === "cote2" && t - e.marqueDepuis >= DUREE_COTE2) e.marque = null;
+        if (o) {
+          classes = e.baseOnglet + (e.marque ? " onglet-signal" + (t - e.marqueDepuis >= DUREE_ECLATS ? " signal-calme" : "") +
+            (e.marque === "fin" ? " onglet-termine" : "") : "");
+          if (o.className !== classes) o.className = classes;
+        }
+      } catch (err) { if (global.console) global.console.error(err); }
+    }
+
+    // Un nouveau signal : « depart », « compte », « fin » ou « cote2 ». annonce : ce que dit la zone d'annonce (lecteurs d'écran), une fois.
+    // Si la carte n'est pas affichée (un autre onglet), son onglet porte le repère de la fin et du changement de côté.
+    function signaler(e, nom, t, annonce) {
+      try {
+        e.signal = nom; e.signalDepuis = t;
+        if (nom === "compte") e.pouls = 1 - e.pouls;
+        if ((nom === "fin" || nom === "cote2") && !e.carteDom) { e.marque = nom; e.marqueDepuis = t; }
+        if (annonce) env.annoncer(annonce);
+      } catch (err) { if (global.console) global.console.error(err); }
+      afficherSignal(e, t);
+    }
+
+    // Ce qui s'éteint tout seul : l'éclair du départ, « Côté 2 », le décompte d'un minuteur arrêté ou hors des 3 dernières secondes, et
+    // « Terminé » dès que le minuteur repart.
+    function eteindreSignal(e, t, reste) {
+      var s = e.signal;
+      if ((s === "depart" && t - e.signalDepuis >= DUREE_DEPART) || (s === "cote2" && t - e.signalDepuis >= DUREE_COTE2) ||
+        (s === "compte" && !(e.m.enMarche && reste >= 1 && reste <= 3)) || (s === "fin" && (e.m.enMarche || reste > 0))) e.signal = null;
     }
 
     // Rafraîchit les minuteurs (même ceux d'un onglet caché) tant que l'écran est en place.
@@ -60,12 +137,11 @@
       var etape = e.cotes > 1 ? UI.el("p", { classe: "minuteur-etape" }) : null;
       var classeBloc = o.ligne ? "chrono" : "minuteur" + (o.principal ? " minuteur-principal" : "") + (o.principal && o.cote ? " minuteur-cotes" : "");
       var bouton = UI.bouton("", function () {
-        env.geste();
         var t = Date.now();
-        if (e.m.enMarche) e.m.pause(t);
+        if (e.m.enMarche) { e.m.pause(t); e.signal = null; }
         else {
           if (e.m.fini(t)) e.cote = 1;                 // « Encore » : on repart du premier côté
-          e.m.demarrer(t); e.precedent = e.m.restant(t); son.bipCourt();
+          e.m.demarrer(t); e.precedent = e.m.restant(t); signaler(e, "depart", t, null);
         }
         e.maj();
       }, "bouton-minuteur");
@@ -82,25 +158,30 @@
       e.maj = function () {
         var t = Date.now(), reste = e.m.restant(t);
         if (e.m.enMarche) {
-          var bipe = M.aBiper(e.precedent, reste);
-          if (bipe === "court") son.bipCourt();
-          if (bipe === "fin") son.bip();
+          var signal = M.aSignaler(e.precedent, reste);
+          if (signal === "court") signaler(e, "compte", t, String(reste));
           e.precedent = reste;
           if (reste === 0) {
-            if (e.cote < e.cotes) {                    // côté suivant : durée pleine, bip court de départ
+            var autreCote = e.cote < e.cotes;
+            if (autreCote) {                           // côté suivant : durée pleine, il part aussitôt
               e.cote++;
-              e.m.demarrer(t); e.precedent = e.m.restant(t); reste = e.precedent; son.bipCourt();
+              e.m.demarrer(t); e.precedent = e.m.restant(t); reste = e.precedent;
             } else e.m.pause(t);
+            if (signal === "fin") {
+              if (autreCote) signaler(e, "cote2", t, "Côté 1 terminé, côté 2"); else signaler(e, "fin", t, "Temps écoulé");
+            }
           }
         }
+        eteindreSignal(e, t, reste);
+        afficherSignal(e, t);
         var termine = !e.m.enMarche && reste === 0;
         temps.textContent = PO.insecable(F.duree(reste));
         arc.setAttribute("stroke-dasharray", (CIRCONFERENCE * reste / c.secondes).toFixed(1) + " " + CIRCONFERENCE);
         bloc.className = classeBloc + (e.m.enMarche ? " en-cours" : "");
         bouton.textContent = e.m.enMarche ? "Pause" : termine ? "Encore" : (reste === c.secondes && e.cote === 1) ? "Démarrer" : "Reprendre";
         if (etape) etape.textContent = termine ? "Les deux côtés sont faits" : "Côté " + e.cote + " sur " + e.cotes;
-        var demarre = e.m.enMarche || (reste > 0 && (reste < c.secondes || e.cote > 1));
-        e.etiquettes.forEach(function (n) { n.textContent = demarre ? " · " + PO.insecable(F.duree(reste)) : ""; });
+        var libelle = texteOnglet(e, t);
+        e.etiquettes.forEach(function (n) { n.textContent = libelle; });
       };
       e.maj();
       return bloc;
@@ -189,22 +270,37 @@
       var niveau = UI.el("span", { classe: "carte-niveau", texte: PO.insecable("Niveau " + j.niveau) });
       var attributs = { classe: "carte" + (c.fait ? " faite" : ""), style: O.styleJoueur(j) };
       if (panneau) { attributs.role = "tabpanel"; attributs.id = PANNEAU; attributs["aria-labelledby"] = idOnglet(c.joueur); }
-      return UI.el("article", attributs, [
+      // Le mot du signal (« Terminé », « Côté 2 ») se pose en travers du haut de la carte (type, titre, description), jamais sur le bas
+      // (dosage, minuteur, « Fait »). Masqué aux lecteurs d'écran : la zone d'annonce le dit déjà.
+      var mot = enCours && c.secondes ? UI.el("p", { classe: "carte-signal", "aria-hidden": "true" }) : null;
+      var article = UI.el("article", attributs, [
         cotes ? UI.el("header", { classe: "carte-entete" }, [UI.el("span", { classe: "carte-prenom", texte: j.prenom }), niveau]) : null,
         UI.el("p", { classe: "carte-reste" }, [O.picto(RP.ICONES.sommet, cotes ? 24 : 20), doc.createTextNode(PO.insecable(PO.texteReste(p, j))),
           cotes ? null : niveau]),
         UI.el("div", { classe: "carte-corps" }, [
-          zoneSuite(UI.el("div", { classe: "carte-haut" }, [
-            type || c.materiel ? UI.el("p", { classe: "carte-type" }, [type ? pictoType : null, UI.el("span", { classe: "carte-type-nom", texte: type }),
-              c.materiel ? UI.el("span", { classe: "carte-materiel", texte: c.materiel }) : null]) : null,
-            UI.el("h3", { classe: "carte-titre", texte: c.titre }),
-            c.allege ? UI.el("p", { classe: "carte-allege", texte: "Version plus facile" }) : null,
-            zoneSuite(UI.el("p", { classe: "carte-description", texte: PO.insecable(c.description) }))
-          ])),
+          UI.el("div", { classe: "carte-zone" }, [
+            zoneSuite(UI.el("div", { classe: "carte-haut" }, [
+              type || c.materiel ? UI.el("p", { classe: "carte-type" }, [type ? pictoType : null, UI.el("span", { classe: "carte-type-nom", texte: type }),
+                c.materiel ? UI.el("span", { classe: "carte-materiel", texte: c.materiel }) : null]) : null,
+              UI.el("h3", { classe: "carte-titre", texte: c.titre }),
+              c.allege ? UI.el("p", { classe: "carte-allege", texte: "Version plus facile" }) : null,
+              zoneSuite(UI.el("p", { classe: "carte-description", texte: PO.insecable(c.description) }))
+            ])),
+            mot
+          ]),
           UI.el("div", { classe: "carte-bas" }, bas)
         ])
       ]);
+      if (mot) {
+        var e = minuteurDe(c);
+        e.carteDom = article; e.bandeauDom = mot; e.baseCarte = article.className;
+        afficherSignal(e, Date.now());
+      }
+      return article;
     }
+
+    // Une carte qui s'affiche n'a plus besoin du repère de son onglet : le joueur l'a ouverte (ou elle est à l'écran, côte à côte).
+    function effacerReperes() { minuteurs.forEach(function (x) { if (x.carteDom) x.marque = null; }); }
 
     // Onglet affiché : celui touché par le joueur, sinon la première carte à faire.
     function ongletCourant(cartes) {
@@ -215,7 +311,6 @@
 
     // Choisir un onglet (touche, flèche) : un geste comme un autre. Le focus reste sur l'onglet, pas sur « Fait ».
     function choisirOnglet(joueur) {
-      env.geste();
       onglet = joueur;
       env.dessiner(function (ecran) { return ecran.querySelector('[role="tab"][aria-selected="true"]'); });
     }
@@ -240,13 +335,20 @@
       return UI.el("nav", { classe: "onglets onglets-" + cartes.length + (cartes.length > 2 ? " onglets-serres" : ""), role: "tablist", "aria-label": "Joueurs" },
         cartes.map(function (c, k) {
           var j = p.joueurs[c.joueur], etiquette = UI.el("span", { classe: "onglet-temps" }), choisi = c.joueur === actuel;
-          if (c.secondes && !c.fait) minuteurDe(c).etiquettes.push(etiquette);
+          var e = c.secondes && !c.fait ? minuteurDe(c) : null;
+          if (e) e.etiquettes.push(etiquette);
           var b = UI.el("button", { type: "button", role: "tab", id: idOnglet(c.joueur), classe: "onglet" + (choisi ? " actif" : "") + (c.fait ? " fait" : ""),
             "aria-selected": String(choisi), "aria-controls": PANNEAU, tabindex: choisi ? "0" : "-1", style: O.styleJoueur(j),
             onclick: function () { choisirOnglet(c.joueur); },
             onkeydown: function (e) { toucheOnglet(e, cartes, k); } },
             [UI.el("span", { classe: "onglet-nom", texte: j.prenom }), c.fait ? O.picto(O.ICO.coche, 18, "onglet-coche") : null, etiquette]);
           if (c.fait) b.setAttribute("aria-label", j.prenom + ", fait");   // la coche seule ne se lit pas
+          if (e) {   // le repère d'un minuteur terminé sur un onglet qu'on ne regarde pas, et le temps restant
+            var t = Date.now();
+            e.ongletDom = b; e.baseOnglet = b.className;
+            etiquette.textContent = texteOnglet(e, t);
+            afficherSignal(e, t);
+          }
           return b;
         }));
     }
@@ -273,10 +375,10 @@
     function ecranEffort() {
       var e = p.etapes[p.etape], total = p.etapes.length, suite = total > 1 ? " · étape " + (p.etape + 1) + " sur " + total : "";
       var cotes = cartesCoteACote(e.cartes.length);
-      var droite = [env.boutonSon(), env.boutonTerminer()];
+      var droite = [env.boutonTerminer()];
       zonesSuite = [];
       minuteurs = minuteurs.filter(function (x) { return !x.carte.fait && e.cartes.indexOf(x.carte) !== -1; });
-      minuteurs.forEach(function (x) { x.etiquettes = []; });
+      minuteurs.forEach(function (x) { x.etiquettes = []; x.carteDom = null; x.bandeauDom = null; x.ongletDom = null; });   // refaits avec l'écran
       var etape = p.tour + "|" + p.etape;
       if (etape !== ongletEtape) { ongletEtape = etape; onglet = null; }
       var annonceCol = p.etape === 0 && p.colAnnule ? UI.el("p", { classe: "etape-annulation", texte: "Le col de ce tour est annulé par la météo." }) : null;
@@ -308,10 +410,13 @@
       cotesDessine = cotes;
       if (cotes || e.cartes.length === 1) {
         enfants.push(UI.el("main", { classe: "cartes cartes-" + e.cartes.length }, e.cartes.map(function (c) { return carte(c, cotes); })));
+        effacerReperes();
       } else {
         var actuel = ongletCourant(e.cartes);
+        var affichee = carte(e.cartes.filter(function (c) { return c.joueur === actuel; })[0], false, true);   // avant les onglets : leurs repères en dépendent
+        effacerReperes();
         enfants.push(onglets(e.cartes, actuel));
-        enfants.push(UI.el("main", { classe: "cartes cartes-onglet" }, [carte(e.cartes.filter(function (c) { return c.joueur === actuel; })[0], false, true)]));
+        enfants.push(UI.el("main", { classe: "cartes cartes-onglet" }, [affichee]));
       }
       var ecran = UI.el("section", { classe: "ecran ecran-effort" + (cotes ? " ecran-effort-cotes" : "") }, enfants);
       ecran.apresAjout = rafraichirSuites;   // la place n'est connue qu'une fois l'écran dans la page
@@ -331,20 +436,29 @@
     function ecranEchauffement() {
       cotesDessine = null;
       var filtres = [];
+      minuteurs.forEach(function (x) { x.etiquettes = []; x.carteDom = null; x.bandeauDom = null; x.ongletDom = null; });   // refaits avec l'écran
       p.joueurs.forEach(function (j) { j.filtres.forEach(function (f) { if (filtres.indexOf(f) === -1) filtres.push(f); }); });
       var lignes = Res.lignesEchauffement(p.ctx.ev, p.plateau.theme, filtres, p.espace).map(function (l, i) {
         var k = l.lastIndexOf(" : "), nom = k === -1 ? l : l.slice(0, k), dose = k === -1 ? "" : l.slice(k + 3);
         var m = PO.morceauxDosage(dose), chrono = chronoEchauffement(i, dose);
-        return UI.el("li", { classe: "echauffement-ligne" }, [
-          UI.el("span", { classe: "echauffement-nom", texte: PO.insecable(nom) }),
+        // Le mot du signal (« Terminé ») s'affiche sous le nom de l'exercice ; la ligne entière porte les classes du signal.
+        var mot = chrono ? UI.el("span", { classe: "ligne-signal", "aria-hidden": "true" }) : null;
+        var ligne = UI.el("li", { classe: "echauffement-ligne" }, [
+          UI.el("span", { classe: "echauffement-nom", texte: PO.insecable(nom) }, [mot]),
           chrono ? blocMinuteur(chrono, { ligne: true })
             : dose ? UI.el("span", { classe: "echauffement-dose" }, [doc.createTextNode(m.valeur), m.cote ? UI.el("small", { texte: m.cote }) : null]) : null
         ]);
+        if (chrono) {
+          var x = minuteurDe(chrono);
+          x.carteDom = ligne; x.bandeauDom = mot; x.baseCarte = ligne.className;
+          afficherSignal(x, Date.now());
+        }
+        return ligne;
       });
       // La règle de sécurité validée par Romain, mot pour mot, au-dessus du bouton.
       var deuxPoints = SECURITE.indexOf(":") + 1;
       var ecran = UI.el("section", { classe: "ecran ecran-echauffement" }, [
-        env.bandeau(bandeauTitre("Échauffement", R.THEMES[p.plateau.theme].libelle + " · tous ensemble"), [env.boutonSon(), env.boutonQuitter()]),
+        env.bandeau(bandeauTitre("Échauffement", R.THEMES[p.plateau.theme].libelle + " · tous ensemble"), [env.boutonQuitter()]),
         UI.el("main", { classe: "echauffement" }, [UI.el("ol", { classe: "echauffement-liste" }, lignes)]),
         UI.el("footer", { classe: "pied" }, [
           UI.el("p", { classe: "securite-ligne" }, [UI.el("b", { texte: F.typo(SECURITE.slice(0, deuxPoints)) }), doc.createTextNode(F.typo(SECURITE.slice(deuxPoints)))]),

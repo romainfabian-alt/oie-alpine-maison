@@ -39,13 +39,14 @@ Texte à transmettre avec le lien ou le QR code.
 > stockage, séparé de celui de Safari. Ce qui s'est chargé ou joué dans
 > l'onglet ne la suit pas.
 >
-> Pour entendre les bips du minuteur, monte le son. Sur iPhone, vérifie aussi que
-> le mode silencieux est désactivé (bouton latéral).
+> Le minuteur ne fait aucun bruit : il se voit. Pendant les 3 dernières secondes,
+> la carte et le grand chiffre passent au cuivre et pulsent ; à la fin, toute la
+> carte s'illumine et affiche « Terminé ».
 >
 > Si l'écran s'éteint pendant un minuteur, allonge le verrouillage automatique
 > de l'écran (iPhone : Réglages, Luminosité et affichage, Verrouillage
 > automatique ; Android : Réglages, Affichage, Mise en veille de l'écran). Un
-> écran éteint fige le minuteur et coupe le bip de fin.
+> écran éteint fige le minuteur et on ne voit plus la fin.
 >
 > Pose l'appareil à portée de vue : le dosage de chaque exercice est affiché en
 > gros. En cas de doute ou de douleur inhabituelle, parles-en à ton kiné.
@@ -162,9 +163,33 @@ navigateur : une carte dès 900 × 700 px, deux dès 900 × 740, trois dès 1000
 quatre dès 1366 × 740 (1133 × 970 au plus juste). Ainsi trois cartes tiennent sur
 1366 × 1024, la maquette validée, et quatre sur un iPad Pro 12,9 pouces.
 
-L'écran reste allumé pendant la partie quand l'appareil le permet. Le son (bips
-au départ du minuteur, aux 3 dernières secondes et à la fin) se coupe depuis
-l'écran de jeu.
+L'écran reste allumé pendant la partie quand l'appareil le permet.
+
+Le son a été retiré le 22/10/2026 (les bips ne sonnaient pas sur iPhone) : un
+signal visuel le remplace, au même moment que les anciens bips, sur toute la
+carte de l'exercice (la ligne, à l'échauffement), pour qu'il se voie du coin de
+l'œil, téléphone posé au sol (`src/vue-effort.js`, `style.css`) :
+
+- **départ** (« Démarrer », « Reprendre », « Encore », et le départ automatique du
+  côté 2) : un éclair bref et discret sur le bord de la carte ;
+- **3 dernières secondes** : le bord de la carte et le grand chiffre passent au
+  cuivre et pulsent une fois par seconde ;
+- **fin** : toute la carte s'illumine trois fois (fond cuivre clair) et affiche
+  « Terminé » en grand, jusqu'à « Fait » ou au départ suivant ; à la fin du côté 1
+  d'un exercice « / côté », c'est « Côté 2 » qui s'affiche un instant, le côté 2
+  étant déjà lancé ;
+- **cartes côte à côte** (tablette) : seule la carte du joueur concerné bouge ;
+- **onglets** (téléphone, ou tablette quand la place manque) : si le minuteur qui
+  se termine est celui d'un joueur dont l'onglet n'est pas affiché, son onglet
+  clignote en cuivre et garde un repère « Terminé » jusqu'à ce qu'on l'ouvre ;
+- **mouvement réduit** (réglage de l'appareil) : aucun clignotement ni aucune
+  pulsation, le signal reste visible par des couleurs fixes (fond cuivre clair,
+  « Terminé » affiché) ; en tout cas jamais plus de 3 clignotements par seconde ;
+- **lecteurs d'écran** : la zone d'annonce dit « 3 », « 2 », « 1 » une seule fois
+  chacun, puis « Temps écoulé » (ou « Côté 1 terminé, côté 2 »).
+
+Le signal ne bloque jamais le minuteur ni la partie : une erreur de son affichage
+va à la console, sans plus.
 
 ## 3. Contenu
 
@@ -217,9 +242,12 @@ il n'y a ni compte ni serveur.
 | `oieMaison.reglages` | Derniers réglages : thème, niveau, durée, espace, joueurs |
 | `oieMaison.partie` | Partie en cours |
 | `oieMaison.historique` | Mes parties (200 au plus) |
-| `oieMaison.son` | Son activé ou coupé |
 
-Les trois liens du bas de l'accueil (prise de rendez-vous, WhatsApp du cabinet,
+Trois clés, donc. L'ancienne clé `oieMaison.son` (préférence du son, retiré le
+22/10/2026) n'est plus lue ni écrite ; au démarrage, l'app la retire des appareils
+où elle traîne encore (`src/app.js`, une ligne protégée par `try/catch`).
+
+Les trois liens du bas de l'accueil (prise de rendez-vous, Instagram du cabinet,
 suivi à distance) ouvrent des sites extérieurs, uniquement quand on les touche.
 Les polices sont embarquées : l'app ne charge rien d'extérieur.
 
@@ -241,7 +269,7 @@ décision du kiné. Ensuite :
 
 1. Si un fichier de la liste `FICHIERS` de `service-worker.js` a changé,
    **incrémenter `CACHE`** (par exemple `oie-maison-v1` devient `oie-maison-v2`).
-   Avant la première publication, `CACHE` reste `oie-maison-v1`. Sans cette étape,
+   L'application est en ligne depuis le 11/10/2026. Sans cette étape,
    les téléphones déjà installés gardent l'ancienne version, sans aucun message
    d'erreur. Le nom de `CACHE` commence toujours par `oie-maison-` : l'adresse
    `romainfabian-alt.github.io` est partagée avec L'Oie Alpine et Réactivité, dont
@@ -274,8 +302,10 @@ s'envoie avec le lien.
 patients.
 
 - [ ] Installation sur l'écran d'accueil depuis le lien et le QR code.
-- [ ] Bips du minuteur audibles, y compris avec l'iPhone en mode silencieux (le
-      bouton latéral peut couper le son d'une web app).
+- [ ] Signal du minuteur visible à 2 m, téléphone posé au sol : les 3 dernières
+      secondes qui pulsent en cuivre, « Terminé » qui occupe la carte, et, sur un
+      iPhone en onglets, le repère « Terminé » sur l'onglet d'un joueur dont la
+      carte n'est pas affichée.
 - [ ] L'écran ne se met pas en veille pendant la partie.
 - [ ] Reprise de la partie après un appel et après la fermeture de l'app.
 - [ ] Carte d'effort lisible à 2 m, téléphone posé au sol.

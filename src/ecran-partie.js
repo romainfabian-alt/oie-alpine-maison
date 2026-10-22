@@ -4,21 +4,22 @@
   // du moteur passe par agir() : verrou contre le double appui, filet en cas
   // d'erreur, puis avis à l'appelant (surChangement) pour qu'il enregistre la
   // partie : cet écran n'écrit rien lui-même dans le stockage. L'appelant fournit :
-  //   partie, son, mode() (« large » ou « etroit », sinon la classe du body),
+  //   partie, mode() (« large » ou « etroit », sinon la classe du body),
   //   taille() (facultatif : { largeur, hauteur } de la fenêtre, pour choisir entre cartes côte à côte et onglets en mode
   //   « large » ; sans elle, les cartes se mettent côte à côte),
   //   surChangement(p) après chaque action qui change l'état, surFin(p) une fois, quand la
   //   partie est finie, surNouvelle() et surQuitter() depuis le podium et l'abandon,
   //   surPause() (partie gardée), veille (facultatif : sinon une veille propre à l'écran).
   // Accessibilité : une zone d'annonce (aria-live) posée dans la page, hors de #racine, dit le résultat du lancer,
-  // le joueur qui doit lancer, les écrans d'annonce et la fin de partie ; après chaque redessin, le focus va au
+  // le joueur qui doit lancer, les écrans d'annonce, le décompte des minuteurs (« 3 », « 2 », « 1 », « Temps écoulé ») et la fin de
+  // partie ; après chaque redessin, le focus va au
   // bouton principal de la vue (ou à la cible que la vue demande, comme l'onglet choisi).
   var VERROU_MS = 500;
   var ANNONCES_GARDEES = 4;   // messages que la zone d'annonce garde (les plus anciens sont retirés)
 
   function afficher(racine, o) {
     var Regles = global.Regles, UI = global.UI, doc = global.document, PO = global.PartieOutils, RP = global.RenduPlateau, F = global.Format;
-    var p = o.partie, son = o.son, fermerCol = null, fermerConfirmation = null, verrouJusqua = 0, quitte = false, panne = false;
+    var p = o.partie, fermerCol = null, fermerConfirmation = null, verrouJusqua = 0, quitte = false, panne = false;
     var verrousCartes = {};   // clé de carte -> instant jusqu'où elle est verrouillée (cartes côte à côte, voir agir)
     var derniereCle = null, messages = [];
     var finSignalee = p.phase === "fini";
@@ -31,10 +32,10 @@
       var t = o.taille ? o.taille() : null;
       return t && global.MiseEnPage ? global.MiseEnPage.disposition(t.largeur, t.hauteur, nbCartes) : "cotes";
     }
-    var env = { p: p, son: son, UI: UI, doc: doc, O: O, mode: mode, disposition: disposition, quitte: function () { return quitte; },
-      agir: agir, transition: transition, verrouiller: verrouiller, dessiner: dessiner, confirmer: confirmer, bandeau: bandeau, boutonSon: boutonSon,
+    var env = { p: p, UI: UI, doc: doc, O: O, mode: mode, disposition: disposition, quitte: function () { return quitte; },
+      agir: agir, transition: transition, verrouiller: verrouiller, dessiner: dessiner, confirmer: confirmer, bandeau: bandeau,
       boutonTerminer: boutonTerminer, boutonQuitter: boutonQuitter, quitter: quitter, nouvelle: nouvelle,
-      geste: geste, annoncer: annoncer, annoncerUnique: annoncerUnique };
+      annoncer: annoncer, annoncerUnique: annoncerUnique };
 
     // Zone d'annonce pour les lecteurs d'écran : hors de #racine (chaque redessin la vide), donc elle survit aux redessins ;
     // visuellement masquée (style.css). Les messages s'ajoutent un à un, les plus anciens partent.
@@ -53,9 +54,6 @@
       derniereCle = cle;
       annoncer(texte);
     }
-
-    // Chaque geste du patient débloque le son (iOS ne l'autorise qu'après un geste) : un seul endroit pour tous.
-    function geste() { try { if (son) son.debloquer(); } catch (e0) { /* le son ne bloque jamais le jeu */ } }
 
     var lancer = global.VueLancer.creer(env), effort = global.VueEffort.creer(env);
 
@@ -97,7 +95,6 @@
     // sienne tout de suite), sauf si l'action change l'écran (le verrou est alors celui de tout l'écran).
     function agir(action, forcer, libre, carte) {
       if (quitte) return false;
-      geste();
       var maintenant = Date.now();
       if (!libre && (maintenant < verrouJusqua || (carte && maintenant < (verrousCartes[carte] || 0)))) return false;
       var avant = signature();
@@ -122,7 +119,6 @@
     // rien à enregistrer, mais le même verrou, pour qu'un double appui ne tombe pas sur le bouton qui suit.
     function transition(fn) {
       if (quitte) return false;
-      geste();
       if (Date.now() < verrouJusqua) return false;
       fn();
       verrouiller();
@@ -134,11 +130,9 @@
     // quand l'écran se redessine derrière (fin de la marche du pion) ; si elle s'annule alors que le redessin a
     // détruit l'élément qui avait le focus, le focus va au bouton principal de la vue.
     function confirmer(titre, texte, choix) {
-      geste();
       if (fermerConfirmation) fermerConfirmation();
       fermerConfirmation = UI.modal(F.typo(titre), F.typo(texte), choix.map(function (c) {
         return { texte: c.texte, classe: c.classe, annuler: !c.action, action: function () {
-          geste();
           fermerConfirmation = null;
           if (c.action) c.action(); else if (!focusDansLEcran()) placerFocus();
         } };
@@ -163,19 +157,6 @@
 
     // Boutons du bandeau : une icône seule sur le téléphone (maquette, vues 5 à 11), l'icône et son
     // mot sur la tablette (vues 15 et 16).
-    function boutonSon() {
-      var large = mode() === "large";
-      var b = O.boutonNu("bouton bouton-discret" + (large ? "" : " bouton-icone"), function () { geste(); son.basculer(); remplir(); });
-      function remplir() {
-        UI.vider(b);
-        b.appendChild(O.picto(son.actif() ? O.ICO.son : O.ICO.muet, 24));
-        if (large) b.appendChild(doc.createTextNode("Son"));
-        b.setAttribute("aria-label", son.actif() ? "Son activé" : "Son coupé");
-      }
-      remplir();
-      return b;
-    }
-
     // « Terminer » : une fenêtre de choix, puis le classement des joueurs encore en course sur leur position.
     // Une fois la partie finie (écran « Voir le podium »), il n'y a plus rien à terminer : pas de bouton.
     function boutonTerminer() {
@@ -251,7 +232,7 @@
       return UI.el("section", { classe: "ecran ecran-erreur" }, [UI.el("main", { classe: "etape-seule" }, [
         UI.el("h1", { classe: "etape-titre", texte: "Petit souci" }),
         UI.el("p", { classe: "etape-texte", texte: texte || "L'écran n'a pas pu s'afficher. La partie est conservée." }),
-        UI.bouton("Réessayer", function () { geste(); dessiner(); }, "bouton-principal bouton-large"),
+        UI.bouton("Réessayer", function () { dessiner(); }, "bouton-principal bouton-large"),
         UI.bouton("Revenir à l'accueil", pause, "bouton-large")
       ])]);
     }

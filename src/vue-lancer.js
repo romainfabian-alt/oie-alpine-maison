@@ -231,16 +231,15 @@
     // Téléphone : le titre et son sous-titre à gauche ; tablette : le sous-titre passe à droite, avec les boutons.
     function bandeauJeu(vue, actif) {
       if (env.mode() === "large") {
-        return env.bandeau([titre(vue, actif)], [UI.el("p", { classe: "bandeau-sous", texte: sousTitre(vue) }), env.boutonSon(), env.boutonTerminer()]);
+        return env.bandeau([titre(vue, actif)], [UI.el("p", { classe: "bandeau-sous", texte: sousTitre(vue) }), env.boutonTerminer()]);
       }
       return env.bandeau([UI.el("div", { classe: "bandeau-titre" }, [titre(vue, actif), UI.el("p", { classe: "bandeau-sous", texte: sousTitre(vue) })])],
-        [env.boutonSon(), env.boutonTerminer()]);
+        [env.boutonTerminer()]);
     }
 
     // Un appui n'importe où sur le plateau saute la fin du déplacement.
     function animer(zone, rafraichir) {
       zone.addEventListener("click", function () {
-        env.geste();
         env.verrouiller();   // « Lancer le dé » du joueur suivant apparaît au même endroit : pas de double appui
         finirDe();
         var a = anim;
@@ -359,7 +358,7 @@
     function annonce() {
       env.annoncerUnique("annonce|" + p.tour, "Refuge : pause pour ce tour. " + texteAnnonce());
       return UI.el("section", { classe: "ecran ecran-annonce" }, [
-        env.bandeau([UI.el("h2", { classe: "titre-ecran", texte: "Refuge" })], [env.boutonSon(), env.boutonTerminer()]),
+        env.bandeau([UI.el("h2", { classe: "titre-ecran", texte: "Refuge" })], [env.boutonTerminer()]),
         UI.el("main", { classe: "etape-seule" }, [
           O.montagne(),
           UI.el("span", { classe: "etape-picto" }, [O.picto(RP.ICONES.refuge, 76)]),

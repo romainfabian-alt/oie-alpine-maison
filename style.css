@@ -27,7 +27,7 @@ body.mode-tourner #tourner {
 /* ---------------------------------------------------------------- base */
 /* Les valeurs visuelles viennent de la maquette validée le 10/10/2026
    (maquettes/ecrans.html) ; les noms de classes, du plan. */
-:root { --sapin-ombre: #1D2C24; --cuivre-fonce: #7A5230; --eteint: #D8D0C3; }
+:root { --sapin-ombre: #1D2C24; --cuivre-fonce: #7A5230; --cuivre-clair: #EBCFAE; --cuivre-eclat: #E4BD92; --eteint: #D8D0C3; }
 h1, h2, h3, p, ul, ol { margin: 0; padding: 0; }
 ul, ol { list-style: none; }
 button { font: inherit; color: inherit; background: none; border: 0; margin: 0; padding: 0; cursor: pointer; }
@@ -633,6 +633,83 @@ body.mode-large .ecran-effort:not(.ecran-effort-cotes) .carte-bas > * { grid-col
 body.mode-large .ecran-effort:not(.ecran-effort-cotes) .carte-bas > .carte-actions { grid-column: 2; grid-row: 1 / span 2; }
 body.mode-large .ecran-effort:not(.ecran-effort-cotes) .carte-haut > .carte-description { min-height: 3.9em; }
 body.mode-large .ecran-effort:not(.ecran-effort-cotes) .minuteur-principal .minuteur-temps { font-size: 64px; font-size: clamp(64px, 8.4dvh, 80px); }
+
+/* ---------------------------------------------------------------- signal visuel du minuteur (remplace le son, retiré le 22/10/2026) */
+/* Le téléphone est posé au sol, le patient en plein effort : le signal se voit du coin de l'œil, sur toute la carte (src/vue-effort.js pose
+   les classes signal-* sur la carte, ou sur la ligne à l'échauffement). Palette du cabinet : cuivre, sapin, ivoire, papier, cacao ; rien de
+   rouge. Texte : sapin sur cuivre clair, 7 contre 1 ; chiffre cuivre sur papier, 3,5 contre 1 pour un très gros corps (3 contre 1 requis).
+   Jamais plus de 3 clignotements par seconde : trois éclats de 700 ms (1,4 par seconde), une impulsion par seconde au décompte. */
+.carte-zone { flex: 1 1 0; min-height: 0; position: relative; display: flex; flex-direction: column; }
+.carte-signal { display: none; position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 1; align-items: center; justify-content: center; padding: 0 8px;
+  border-radius: 12px; background: var(--cuivre-clair); color: var(--sapin); text-align: center; white-space: nowrap; pointer-events: none;
+  font-weight: 600; line-height: 1; font-size: 56px; font-size: clamp(44px, 17vw, 76px); }
+.ecran-effort-cotes .carte-signal { font-size: 44px; font-size: clamp(36px, 5vw, 72px); }
+.ligne-signal { display: none; margin-top: 4px; font-size: 24px; font-weight: 600; line-height: 1.1; color: var(--sapin); }
+.signal-fin .carte-signal, .signal-cote2 .carte-signal { display: flex; }
+/* Le mot recouvre le haut de la carte : ce qu'il cache s'efface (opacity, pas visibility : un lecteur d'écran le lit toujours). */
+.signal-fin .carte-haut, .signal-cote2 .carte-haut { opacity: 0; }
+.signal-fin .ligne-signal, .signal-cote2 .ligne-signal { display: block; }
+
+/* Départ : un éclair bref et discret sur le bord. */
+.signal-depart { border-color: var(--cuivre); animation: signal-depart 800ms ease-out 1; }
+@keyframes signal-depart {
+  from { background-color: #F6EBDD; box-shadow: 0 0 0 0 rgba(176, 125, 79, .8); }
+  to { background-color: var(--papier); box-shadow: 0 0 0 12px rgba(176, 125, 79, 0); }
+}
+
+/* 3 dernières secondes : le bord et le grand chiffre passent au cuivre ; chaque seconde relance une impulsion (deux noms d'animation qui
+   alternent, src/vue-effort.js, signal-pouls-0 et -1). */
+.signal-compte { border-color: var(--cuivre); box-shadow: 0 0 0 4px rgba(176, 125, 79, .6); }
+.signal-compte .minuteur-temps { color: var(--cuivre); transform-origin: left center; }
+.signal-pouls-0 { animation: signal-pouls-a 1s ease-out 1; }
+.signal-pouls-1 { animation: signal-pouls-b 1s ease-out 1; }
+.signal-pouls-0 .minuteur-temps { animation: signal-chiffre-a 1s ease-out 1; }
+.signal-pouls-1 .minuteur-temps { animation: signal-chiffre-b 1s ease-out 1; }
+@keyframes signal-pouls-a {
+  from { background-color: #F6EBDD; box-shadow: 0 0 0 10px rgba(176, 125, 79, .7); }
+  to { background-color: var(--papier); box-shadow: 0 0 0 4px rgba(176, 125, 79, .6); }
+}
+@keyframes signal-pouls-b {
+  from { background-color: #F6EBDD; box-shadow: 0 0 0 10px rgba(176, 125, 79, .7); }
+  to { background-color: var(--papier); box-shadow: 0 0 0 4px rgba(176, 125, 79, .6); }
+}
+@keyframes signal-chiffre-a { from { transform: scale(1.22); } to { transform: scale(1); } }
+@keyframes signal-chiffre-b { from { transform: scale(1.22); } to { transform: scale(1); } }
+
+/* Fin : toute la carte s'illumine trois fois (fond cuivre clair, puis retour) et le mot « Terminé » (ou « Côté 2 ») s'affiche en grand ;
+   la carte reste cernée de cuivre, le mot en place, jusqu'à « Fait » ou au départ suivant. */
+.signal-fin, .signal-cote2 { border-color: var(--cuivre); box-shadow: 0 0 0 5px var(--cuivre); animation: signal-eclat 700ms ease-in-out 3; }
+.signal-fin .carte-signal, .signal-cote2 .carte-signal { animation: signal-eclat-mot 700ms ease-in-out 3; }
+.signal-calme, .signal-calme .carte-signal { animation: none; }
+.echauffement-ligne.signal-fin, .echauffement-ligne.signal-cote2 { background-color: var(--cuivre-clair); }
+@keyframes signal-eclat {
+  0%, 100% { background-color: var(--papier); box-shadow: 0 0 0 5px var(--cuivre); }
+  50% { background-color: var(--cuivre-eclat); box-shadow: 0 0 0 12px rgba(176, 125, 79, .5); }
+}
+@keyframes signal-eclat-mot {
+  0%, 100% { background-color: var(--papier); }
+  50% { background-color: var(--cuivre-eclat); }
+}
+
+/* Onglet d'un joueur dont la carte n'est pas affichée : il clignote en cuivre trois fois, puis garde un repère « Terminé » (une pastille
+   cuivre foncé, ivoire dessus : 6,4 contre 1) jusqu'à ce qu'on l'ouvre. */
+.onglet-signal { animation: signal-onglet 700ms ease-in-out 3; }
+.onglet-signal.signal-calme { animation: none; }
+.onglet-signal .onglet-temps { padding: 1px 9px; border-radius: 10px; background: var(--cuivre-fonce); color: var(--ivoire); font-weight: 600; }
+.onglet-termine.signal-calme { background: var(--cuivre-clair); box-shadow: inset 0 0 0 3px var(--cuivre); }
+@keyframes signal-onglet {
+  0%, 100% { box-shadow: inset 0 0 0 0 var(--cuivre); }
+  50% { background: var(--cuivre-eclat); box-shadow: inset 0 0 0 5px var(--cuivre); }
+}
+
+/* Mouvement réduit : ni éclat ni impulsion. Le signal reste visible par des couleurs fixes (fond cuivre clair, bord cuivre, mot affiché). */
+@media (prefers-reduced-motion: reduce) {
+  .signal-depart, .signal-pouls-0, .signal-pouls-1, .signal-fin, .signal-cote2, .onglet-signal,
+  .signal-pouls-0 .minuteur-temps, .signal-pouls-1 .minuteur-temps, .signal-fin .carte-signal, .signal-cote2 .carte-signal { animation: none; }
+  .signal-depart { background-color: #F6EBDD; box-shadow: 0 0 0 4px rgba(176, 125, 79, .6); }
+  .signal-fin, .signal-cote2 { background-color: var(--cuivre-clair); }
+  .onglet-signal { background: var(--cuivre-clair); box-shadow: inset 0 0 0 3px var(--cuivre); }
+}
 
 /* ---------------------------------------------------------------- météo, refuge et annonces (vue 11) */
 .decor-montagne { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 210px; pointer-events: none; }

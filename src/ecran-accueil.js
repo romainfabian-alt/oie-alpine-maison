@@ -6,7 +6,7 @@
 
   var LIENS = [
     { texte: "Prendre rendez-vous", href: "https://maddie.doctor/cabinet/kine/tignes/cabinet-kine-sport" },
-    { texte: "WhatsApp du cabinet", href: "https://wa.me/33786407243" },
+    { texte: "Instagram du cabinet", href: "https://www.instagram.com/kinesport.tignes/" },
     { texte: "Suivi à distance avec Andrew", href: "https://mammoth-rubidium-b20.notion.site/Suivi-distance-avec-Andrew-3750d78836f781be8cfcff1995103c47" }
   ];
   var AVERTISSEMENT = "En cas de doute ou de douleur inhabituelle, parles-en à ton kiné.";
